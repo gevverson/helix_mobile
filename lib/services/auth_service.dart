@@ -49,6 +49,7 @@ class AuthService {
           'full_name': name,
           'email': email,
           'password': password,
+          'consent': true,
           'bio_profile': {},
         }),
       );

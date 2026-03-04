@@ -1,3 +1,5 @@
+import 'dart:io' show File;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../config/app_constants.dart';
@@ -43,9 +45,20 @@ class _ScanScreenState extends State<ScanScreen>
     final result = await FilePicker.platform.pickFiles(type: FileType.image);
     if (result == null) return;
 
-    final fileBytes = result.files.first.bytes;
-    final fileName = result.files.first.name;
-    if (fileBytes == null) return;
+    final pickedFile = result.files.first;
+    final fileName = pickedFile.name;
+
+    // On web, bytes are available directly.
+    // On native (Android/iOS), bytes is null — read from the file path.
+    final fileBytes = pickedFile.bytes ??
+        ((!kIsWeb && pickedFile.path != null)
+            ? await File(pickedFile.path!).readAsBytes()
+            : null);
+
+    if (fileBytes == null) {
+      setState(() => _errorMessage = 'Could not read the selected file.');
+      return;
+    }
 
     setState(() {
       _isScanning = true;

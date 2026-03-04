@@ -10,7 +10,7 @@ import 'auth_service.dart';
 class ProfileService {
   /// Fetch the current user's profile from the API.
   static Future<User?> fetchProfile() async {
-    final url = Uri.parse('${AppConstants.baseUrl}/users/me');
+    final url = Uri.parse('${AppConstants.baseUrl}/api/v1/users/me');
     final token = await AuthService.getToken();
 
     if (token == null) return null;
@@ -96,10 +96,18 @@ class ProfileService {
     Map<String, dynamic> female,
   ) async {
     final url = Uri.parse('${AppConstants.baseUrl}/api/v1/check-match');
+    final token = await AuthService.getToken();
+
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+    };
+    if (token != null) {
+      headers['Authorization'] = 'Bearer $token';
+    }
 
     final response = await http.post(
       url,
-      headers: {'Content-Type': 'application/json'},
+      headers: headers,
       body: jsonEncode({
         'male_profile': male,
         'female_profile': female,

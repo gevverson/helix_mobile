@@ -81,7 +81,7 @@ class _SplashScreenState extends State<SplashScreen>
                         shaderCallback: (bounds) =>
                             AppConstants.accentGradient.createShader(bounds),
                         child: const Text(
-                          'HELIX CORE',
+                          'HELIX',
                           style: TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.w900,

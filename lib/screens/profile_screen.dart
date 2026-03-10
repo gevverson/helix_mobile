@@ -245,7 +245,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       // ── Version ──
                       Center(
                         child: Text(
-                          'Helix Core v${AppConstants.appVersion}',
+                          'Helix v${AppConstants.appVersion}',
                           style: const TextStyle(
                             color: AppConstants.textMuted,
                             fontSize: 12,

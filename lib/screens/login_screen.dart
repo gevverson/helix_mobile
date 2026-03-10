@@ -102,7 +102,7 @@ class _LoginScreenState extends State<LoginScreen>
                       shaderCallback: (bounds) =>
                           AppConstants.accentGradient.createShader(bounds),
                       child: const Text(
-                        'HELIX CORE',
+                        'HELIX',
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.w900,

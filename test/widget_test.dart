@@ -8,7 +8,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
 
     // Verify the splash screen branding is displayed
-    expect(find.text('HELIX CORE'), findsOneWidget);
+    expect(find.text('HELIX'), findsOneWidget);
     expect(find.text('Your Genetic Health Companion'), findsOneWidget);
   });
 }

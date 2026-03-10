@@ -33,6 +33,27 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  /// Attempt Google Sign-In. Returns `true` on success.
+  Future<bool> signInWithGoogle() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final success = await AuthService.signInWithGoogle();
+      if (!success) {
+        _errorMessage = 'Google Sign-In failed or was cancelled.';
+      }
+      return success;
+    } catch (e) {
+      _errorMessage = 'Connection failed. Check your network.';
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   /// Attempt registration. Returns `true` on success.
   Future<bool> register(String name, String email, String password) async {
     _isLoading = true;

@@ -193,6 +193,58 @@ class _LoginScreenState extends State<LoginScreen>
                               isLoading: authProvider.isLoading,
                               onPressed: _handleLogin,
                             ),
+
+                            const SizedBox(height: 16),
+                            // Google Sign-In button
+                            SizedBox(
+                              width: double.infinity,
+                              height: 54,
+                              child: OutlinedButton.icon(
+                                onPressed: authProvider.isLoading
+                                    ? null
+                                    : () async {
+                                        final success =
+                                            await authProvider.signInWithGoogle();
+                                        if (success && mounted) {
+                                          Navigator.pushReplacementNamed(
+                                            context,
+                                            AppRouter.mainShell,
+                                          );
+                                        }
+                                      },
+                                icon: authProvider.isLoading
+                                    ? const SizedBox(
+                                        width: 24,
+                                        height: 24,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: AppConstants.textSecondary,
+                                        ),
+                                      )
+                                    : Image.asset(
+                                        'assets/images/google_logo.png', // Fallback to an icon if asset doesn't exist? Actually let's just use Google logo URL or Icon if asset isn't there.
+                                        width: 24,
+                                        errorBuilder: (context, error, stackTrace) =>
+                                            const Icon(Icons.g_mobiledata, size: 36, color: Colors.white),
+                                      ),
+                                label: const Text(
+                                  'Continue with Google',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(
+                                      color: AppConstants.borderColor, width: 1.5),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  backgroundColor: AppConstants.bgElevated,
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),

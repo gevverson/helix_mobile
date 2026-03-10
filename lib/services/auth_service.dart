@@ -1,10 +1,13 @@
 import 'dart:convert';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_constants.dart';
 
 /// Handles all authentication-related API calls.
 class AuthService {
+  static final GoogleSignIn _googleSignIn = GoogleSignIn();
+
   /// Authenticate with email + password. Returns `true` on success.
   ///
   /// On success the JWT access token is persisted to SharedPreferences
@@ -32,6 +35,36 @@ class AuthService {
       } else {
         return false;
       }
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Authenticate with Google Sign-In. Returns `true` on success.
+  static Future<bool> signInWithGoogle() async {
+    try {
+      final account = await _googleSignIn.signIn();
+      if (account == null) return false; // User cancelled
+
+      final auth = await account.authentication;
+      if (auth.idToken == null) return false;
+
+      final url = Uri.parse('${AppConstants.baseUrl}/api/v1/auth/google');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'token': auth.idToken}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final token = data['access_token'] as String;
+
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(AppConstants.tokenKey, token);
+        return true;
+      }
+      return false;
     } catch (e) {
       return false;
     }

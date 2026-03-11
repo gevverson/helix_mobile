@@ -6,7 +6,9 @@ import '../config/app_constants.dart';
 
 /// Handles all authentication-related API calls.
 class AuthService {
-  static final GoogleSignIn _googleSignIn = GoogleSignIn();
+  static final GoogleSignIn _googleSignIn = GoogleSignIn(
+    serverClientId: '270036019497-oaau24hq70o051b9u2tftcif78ak05a2.apps.googleusercontent.com',
+  );
 
   /// Authenticate with email + password. Returns `true` on success.
   ///

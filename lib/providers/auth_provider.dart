@@ -40,13 +40,14 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final success = await AuthService.signInWithGoogle();
-      if (!success) {
-        _errorMessage = 'Google Sign-In failed or was cancelled.';
+      final error = await AuthService.signInWithGoogle();
+      if (error != null) {
+        _errorMessage = error;
+        return false;
       }
-      return success;
+      return true; // Null error means success
     } catch (e) {
-      _errorMessage = 'Connection failed. Check your network.';
+      _errorMessage = 'Connection failed. Check your network. $e';
       return false;
     } finally {
       _isLoading = false;

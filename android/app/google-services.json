@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "270036019497-ho6ofksq9td3nhmojtopuimhf89hnmbr.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.helix.mobile",
+            "certificate_hash": "69cc874c0107857cb9620738672496bba4cc7039"
+          }
+        },
+        {
           "client_id": "270036019497-oaau24hq70o051b9u2tftcif78ak05a2.apps.googleusercontent.com",
           "client_type": 3
         }

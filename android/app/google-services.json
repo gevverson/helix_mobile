@@ -14,19 +14,19 @@
       },
       "oauth_client": [
         {
-          "client_id": "270036019497-44o9nrhsrc39p1qevo84jk5965ko4ehu.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.helix.mobile",
-            "certificate_hash": "7a246e9645bf865815798249ff0eff032d503707"
-          }
-        },
-        {
           "client_id": "270036019497-ho6ofksq9td3nhmojtopuimhf89hnmbr.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.helix.mobile",
             "certificate_hash": "69cc874c0107857cb9620738672496bba4cc7039"
+          }
+        },
+        {
+          "client_id": "270036019497-debug-client-id.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.helix.mobile",
+            "certificate_hash": "7a246e9645bf865815798249ff0eff032d503707"
           }
         },
         {

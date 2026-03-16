@@ -6,6 +6,7 @@ class HelixApiInterceptor extends InterceptorContract {
   Future<BaseRequest> interceptRequest({
     required BaseRequest request,
   }) async {
+    print('API REQUEST: ${request.method} ${request.url}');
     // Add custom User-Agent to bypass restrictive firewalls/Cloudflare on Render
     request.headers[HttpHeaders.userAgentHeader] = 'Mozilla/5.0 (Linux; Android) HelixApp/1.0';
     request.headers[HttpHeaders.acceptHeader] = 'application/json';
@@ -16,6 +17,10 @@ class HelixApiInterceptor extends InterceptorContract {
   Future<BaseResponse> interceptResponse({
     required BaseResponse response,
   }) async {
+    print('API RESPONSE: ${response.statusCode} (${response.request?.url})');
+    if (response.statusCode >= 400 && response is Response) {
+      print('API ERROR BODY: ${response.body}');
+    }
     return response;
   }
 }

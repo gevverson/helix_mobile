@@ -9,7 +9,8 @@ class AppConstants {
   /// - Web/Chrome: 'http://localhost:8000'
   /// - Android Emulator: 'http://10.0.2.2:8000'
   /// - Real device on same Wi-Fi: use your machine's local IP address on port 8000
-  static const String baseUrl = 'https://helix-api-wc16.onrender.com';
+  // static const String baseUrl = 'https://helix-api-wc16.onrender.com';
+  static const String baseUrl = 'http://192.168.1.209:8000';
 
   static const String appName = 'Helix';
   static const String appVersion = '1.0.0';

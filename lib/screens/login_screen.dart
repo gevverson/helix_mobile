@@ -6,6 +6,7 @@ import '../routes/app_router.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/helix_text_field.dart';
 import '../widgets/helix_button.dart';
+import '../widgets/helix_signin_modal.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -205,6 +206,10 @@ class _LoginScreenState extends State<LoginScreen>
                                     onPressed: authProvider.isLoading
                                         ? null
                                         : () async {
+                                            // Show branded Helix modal first
+                                            final confirmed = await showHelixSignInModal(context);
+                                            if (!confirmed || !mounted) return;
+
                                             final success =
                                                 await authProvider.signInWithGoogle();
                                             if (success && mounted) {

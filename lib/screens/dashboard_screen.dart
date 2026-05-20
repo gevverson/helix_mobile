@@ -84,8 +84,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                               ),
                               child: Center(
                                 child: Text(
-                                  (_user?.name?.isNotEmpty == true)
-                                      ? _user!.name![0].toUpperCase()
+                                  (_user?.fullName?.isNotEmpty == true)
+                                      ? _user!.fullName![0].toUpperCase()
                                       : '?',
                                   style: const TextStyle(
                                     color: AppConstants.bgPrimary,
@@ -109,7 +109,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    _user?.name ?? 'User',
+                                    _user?.fullName ?? 'User',
                                     style: const TextStyle(
                                       color: AppConstants.textPrimary,
                                       fontSize: 20,

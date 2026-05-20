@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http_interceptor/http_interceptor.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,7 +9,7 @@ import 'api_interceptor.dart';
 /// Handles all authentication-related API calls.
 class AuthService {
   static final GoogleSignIn _googleSignIn = GoogleSignIn(
-    serverClientId: '270036019497-oaau24hq70o051b9u2tftcif78ak05a2.apps.googleusercontent.com',
+    serverClientId: AppConstants.googleClientId,
     scopes: ['email', 'profile'],
   );
 
@@ -52,41 +53,27 @@ class AuthService {
   /// Authenticate with Google Sign-In. Returns error message or null on success.
   static Future<String?> signInWithGoogle() async {
     try {
-      print('DEBUG: Starting Google Sign-In process (forcing account selection)...');
-      // Explicitly sign out before signing in to force the account picker dialog
+      // Force account picker by signing out first
       await _googleSignIn.signOut();
-      
+
       final account = await _googleSignIn.signIn();
-      
+
       if (account == null) {
-        print('DEBUG: Google Sign-In cancelled by user or intermittent error.');
         return 'Google Sign-In was cancelled.';
       }
 
-      print('DEBUG: Google account retrieved: ${account.email}');
       final auth = await account.authentication;
-      
+
       if (auth.idToken == null) {
-        print('DEBUG: Failed to retrieve Google ID token (it is null).');
         return 'Failed to retrieve secure token from Google. Please try again.';
       }
 
-      // --- DEBUG: Decode ID Token to see claims ---
-      try {
-        final parts = auth.idToken!.split('.');
-        if (parts.length > 1) {
-          final payload = parts[1];
-          final normalizedPayload = base64.normalize(payload);
-          final claims = jsonDecode(utf8.decode(base64.decode(normalizedPayload)));
-          print('DEBUG: ID Token Detail - aud: ${claims['aud']}, iss: ${claims['iss']}, email: ${claims['email']}');
-        }
-      } catch (e) {
-        print('DEBUG: Failed to decode ID Token: $e');
+      if (kDebugMode) {
+        debugPrint('AuthService: Google account retrieved — ${account.email}');
       }
 
       final url = Uri.parse('${AppConstants.baseUrl}/api/v1/auth/google');
-      print('DEBUG: Authenticating with backend: $url');
-      
+
       final response = await _client.post(
         url,
         headers: {'Content-Type': 'application/json'},
@@ -99,20 +86,23 @@ class AuthService {
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(AppConstants.tokenKey, token);
-        print('DEBUG: Backend authentication successful.');
-        return null;
+        return null; // success
       }
-      
-      print('DEBUG: Backend failed with status ${response.statusCode}: ${response.body}');
-      return 'Server error: ${response.statusCode}. Please try again later.';
-    } catch (e, stack) {
-      print('DEBUG: Google Sign-In exception: $e');
-      print('DEBUG: Stack trace: $stack');
-      
-      if (e.toString().contains('network_error')) {
+
+      if (kDebugMode) {
+        debugPrint('AuthService: backend returned ${response.statusCode}');
+      }
+      return 'Server error (${response.statusCode}). Please try again later.';
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('AuthService: Google Sign-In error — $e');
+      }
+
+      final msg = e.toString();
+      if (msg.contains('network_error')) {
         return 'Network error. Please check your connection.';
-      } else if (e.toString().contains('DEVELOPER_ERROR')) {
-        return 'Configuration error (Developer Error). Please contact support.';
+      } else if (msg.contains('DEVELOPER_ERROR')) {
+        return 'Configuration error. Please contact support.';
       }
       return 'An unexpected error occurred during Google Sign-In.';
     }

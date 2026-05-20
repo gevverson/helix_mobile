@@ -118,8 +118,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                               child: Center(
                                 child: Text(
-                                  (_user?.name?.isNotEmpty == true)
-                                      ? _user!.name![0].toUpperCase()
+                                  (_user?.fullName?.isNotEmpty == true)
+                                      ? _user!.fullName![0].toUpperCase()
                                       : '?',
                                   style: const TextStyle(
                                     color: AppConstants.bgPrimary,
@@ -131,7 +131,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              _user?.name ?? 'Unknown User',
+                              _user?.fullName ?? 'Unknown User',
                               style: const TextStyle(
                                 color: AppConstants.textPrimary,
                                 fontSize: 22,

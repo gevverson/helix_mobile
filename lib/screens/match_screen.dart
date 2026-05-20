@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
 import '../config/app_constants.dart';
+import '../models/match_result.dart';
 import '../models/user.dart';
 import '../services/profile_service.dart';
 import '../widgets/glass_card.dart';
@@ -26,7 +27,7 @@ class _MatchScreenState extends State<MatchScreen> {
   String _userSex = 'male';
 
   bool _isChecking = false;
-  Map<String, dynamic>? _result;
+  MatchResult? _result;
   String? _errorMessage;
 
   static const _genotypes = ['AA', 'AS', 'SS', 'AC', 'SC'];
@@ -464,11 +465,8 @@ class _MatchScreenState extends State<MatchScreen> {
   }
 
   Widget _buildResultCard() {
-    final status = _result?['status'] as String? ?? 'unknown';
-    final messages = (_result?['messages'] as List?)
-            ?.map((m) => m.toString())
-            .toList() ??
-        [];
+    final status = _result?.status ?? 'unknown';
+    final messages = _result?.messages ?? [];
     final riskColor = _statusColor(status);
     final riskPercent = _statusPercent(status);
 

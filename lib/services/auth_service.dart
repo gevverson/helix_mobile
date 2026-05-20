@@ -1,10 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:http_interceptor/http_interceptor.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_constants.dart';
-import 'api_interceptor.dart';
+import 'api_client.dart';
 
 /// Handles all authentication-related API calls.
 class AuthService {
@@ -13,10 +12,7 @@ class AuthService {
     scopes: ['email', 'profile'],
   );
 
-  static final _client = InterceptedClient.build(
-    interceptors: [HelixApiInterceptor()],
-    retryPolicy: HelixRetryPolicy(),
-  );
+  static final _client = ApiClient.instance;
 
   /// Authenticate with email + password. Returns `true` on success.
   ///

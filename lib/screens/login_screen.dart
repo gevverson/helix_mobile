@@ -206,18 +206,14 @@ class _LoginScreenState extends State<LoginScreen>
                                     onPressed: authProvider.isLoading
                                         ? null
                                         : () async {
+                                            final navigator = Navigator.of(context);
                                             // Show branded Helix modal first
                                             final confirmed = await showHelixSignInModal(context);
                                             if (!confirmed || !mounted) return;
 
                                             final success =
                                                 await authProvider.signInWithGoogle();
-                                            if (success && mounted) {
-                                              Navigator.pushReplacementNamed(
-                                                context,
-                                                AppRouter.mainShell,
-                                              );
-                                            }
+                                            if (success) navigator.pushReplacementNamed(AppRouter.mainShell);
                                           },
                                     style: OutlinedButton.styleFrom(
                                       side: BorderSide(

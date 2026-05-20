@@ -1,5 +1,5 @@
 {
-  "API_BASE_URL": "https://helix-core-staging.onrender.com",
-  "GOOGLE_CLIENT_ID": "",
+  "API_BASE_URL": "https://helix-api-wc16.onrender.com",
+  "GOOGLE_CLIENT_ID": "270036019497-oaau24hq70o051b9u2tftcif78ak05a2.apps.googleusercontent.com",
   "APP_FLAVOR": "staging"
 }

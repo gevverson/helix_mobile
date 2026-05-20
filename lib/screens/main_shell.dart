@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../config/app_constants.dart';
+import '../routes/app_router.dart';
+import '../services/session_manager.dart';
 import 'dashboard_screen.dart';
 import 'scan_screen.dart';
 import 'match_screen.dart';
@@ -22,6 +24,36 @@ class _MainShellState extends State<MainShell> {
     MatchScreen(),
     ProfileScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    SessionManager.sessionExpired.addListener(_onSessionExpired);
+  }
+
+  @override
+  void dispose() {
+    SessionManager.sessionExpired.removeListener(_onSessionExpired);
+    super.dispose();
+  }
+
+  void _onSessionExpired() {
+    if (!SessionManager.sessionExpired.value) return;
+    SessionManager.sessionExpired.value = false;
+
+    if (!mounted) return;
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      AppRouter.login,
+      (_) => false,
+    );
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Your session has expired. Please sign in again.'),
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 4),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {

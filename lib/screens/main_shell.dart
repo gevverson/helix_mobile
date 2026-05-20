@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../config/app_constants.dart';
 import '../routes/app_router.dart';
 import '../services/session_manager.dart';
@@ -42,10 +43,7 @@ class _MainShellState extends State<MainShell> {
     SessionManager.sessionExpired.value = false;
 
     if (!mounted) return;
-    Navigator.of(context).pushNamedAndRemoveUntil(
-      AppRouter.login,
-      (_) => false,
-    );
+    context.go(AppRouter.login);
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Your session has expired. Please sign in again.'),

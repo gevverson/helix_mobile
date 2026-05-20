@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../config/app_constants.dart';
 import '../providers/auth_provider.dart';
@@ -100,7 +101,7 @@ class _RegisterScreenState extends State<RegisterScreen>
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
-      Navigator.pushReplacementNamed(context, AppRouter.login);
+      if (context.mounted) context.go(AppRouter.login);
     }
   }
 
@@ -329,8 +330,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                         GestureDetector(
                           onTap: () {
                             authProvider.clearError();
-                            Navigator.pushReplacementNamed(
-                                context, AppRouter.login);
+                            context.go(AppRouter.login);
                           },
                           child: const Text(
                             'Sign In',

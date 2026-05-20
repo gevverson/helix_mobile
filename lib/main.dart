@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 import 'config/app_theme.dart';
 import 'config/app_constants.dart';
 import 'providers/auth_provider.dart';
+import 'providers/match_provider.dart';
+import 'providers/profile_provider.dart';
+import 'providers/scan_provider.dart';
 import 'routes/app_router.dart';
 import 'package:firebase_core/firebase_core.dart';
 
@@ -20,13 +23,15 @@ class HelixApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => ProfileProvider()),
+        ChangeNotifierProvider(create: (_) => ScanProvider()),
+        ChangeNotifierProvider(create: (_) => MatchProvider()),
       ],
-      child: MaterialApp(
+      child: MaterialApp.router(
         title: AppConstants.appName,
         debugShowCheckedModeBanner: false,
         theme: AppTheme.darkTheme,
-        initialRoute: AppRouter.splash,
-        onGenerateRoute: AppRouter.onGenerateRoute,
+        routerConfig: AppRouter.router,
       ),
     );
   }

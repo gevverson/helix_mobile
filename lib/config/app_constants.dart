@@ -2,26 +2,32 @@ import 'package:flutter/material.dart';
 
 /// Centralized app-wide constants.
 ///
-/// Pass environment at build/run time via --dart-define:
+/// Use flavor files with --dart-define-from-file instead of individual flags:
 /// ```
-/// flutter run  --dart-define=API_BASE_URL=http://10.0.2.2:8000
-/// flutter build apk --dart-define=API_BASE_URL=https://helix-api-wc16.onrender.com
-///                   --dart-define=GOOGLE_CLIENT_ID=YOUR_CLIENT_ID
+/// flutter run  --dart-define-from-file=flavors/dev.json
+/// flutter run  --dart-define-from-file=flavors/staging.json
+/// flutter build apk --dart-define-from-file=flavors/prod.json
 /// ```
+/// See .vscode/launch.json for pre-configured VS Code run configurations.
 class AppConstants {
   AppConstants._(); // Prevent instantiation
 
-  /// Backend API base URL — injected at compile time via --dart-define=API_BASE_URL.
-  /// Default targets the Android emulator loopback; override for real devices and production.
+  /// Backend API base URL — injected at compile time from flavor JSON.
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: 'http://10.0.2.2:8000',
   );
 
-  /// Google OAuth server client ID — injected at compile time via --dart-define=GOOGLE_CLIENT_ID.
+  /// Google OAuth server client ID — injected at compile time from flavor JSON.
   static const String googleClientId = String.fromEnvironment(
     'GOOGLE_CLIENT_ID',
     defaultValue: '',
+  );
+
+  /// Active flavor: 'dev' | 'staging' | 'prod'
+  static const String flavor = String.fromEnvironment(
+    'APP_FLAVOR',
+    defaultValue: 'dev',
   );
 
   static const String appName = 'Helix';

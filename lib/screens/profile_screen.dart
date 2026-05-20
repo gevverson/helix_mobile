@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../config/app_constants.dart';
 import '../models/user.dart';
@@ -70,10 +71,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
 
     if (confirm == true && mounted) {
+      final router = GoRouter.of(context);
       await context.read<AuthProvider>().logout();
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, AppRouter.login);
-      }
+      router.go(AppRouter.login);
     }
   }
 

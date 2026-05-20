@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../config/app_constants.dart';
 import '../providers/auth_provider.dart';
@@ -52,7 +53,7 @@ class _LoginScreenState extends State<LoginScreen>
     );
 
     if (success && mounted) {
-      Navigator.pushReplacementNamed(context, AppRouter.mainShell);
+      context.go(AppRouter.mainShell);
     }
   }
 
@@ -206,14 +207,13 @@ class _LoginScreenState extends State<LoginScreen>
                                     onPressed: authProvider.isLoading
                                         ? null
                                         : () async {
-                                            final navigator = Navigator.of(context);
                                             // Show branded Helix modal first
                                             final confirmed = await showHelixSignInModal(context);
                                             if (!confirmed || !mounted) return;
 
                                             final success =
                                                 await authProvider.signInWithGoogle();
-                                            if (success) navigator.pushReplacementNamed(AppRouter.mainShell);
+                                            if (success && context.mounted) context.go(AppRouter.mainShell);
                                           },
                                     style: OutlinedButton.styleFrom(
                                       side: BorderSide(
@@ -264,8 +264,7 @@ class _LoginScreenState extends State<LoginScreen>
                             GestureDetector(
                               onTap: () {
                                 authProvider.clearError();
-                                Navigator.pushReplacementNamed(
-                                    context, AppRouter.register);
+                                context.go(AppRouter.register);
                               },
                               child: const Text(
                                 'Register',

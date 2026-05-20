@@ -1,0 +1,26 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Helix (dev)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "debug",
+      "args": ["--dart-define-from-file=flavors/dev.json"]
+    },
+    {
+      "name": "Helix (staging)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "debug",
+      "args": ["--dart-define-from-file=flavors/staging.json"]
+    },
+    {
+      "name": "Helix (prod — profile build)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "profile",
+      "args": ["--dart-define-from-file=flavors/prod.json"]
+    }
+  ]
+}

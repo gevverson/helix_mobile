@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../config/app_constants.dart';
 import '../routes/app_router.dart';
 import '../services/auth_service.dart';
@@ -44,10 +45,7 @@ class _SplashScreenState extends State<SplashScreen>
     final isLoggedIn = await AuthService.isLoggedIn();
     if (!mounted) return;
 
-    Navigator.pushReplacementNamed(
-      context,
-      isLoggedIn ? AppRouter.mainShell : AppRouter.login,
-    );
+    context.go(isLoggedIn ? AppRouter.mainShell : AppRouter.login);
   }
 
   @override

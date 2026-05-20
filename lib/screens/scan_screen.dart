@@ -1,9 +1,11 @@
 import 'dart:io' show File;
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../config/app_constants.dart';
 import '../models/scan_result.dart';
+import '../services/network_guard.dart';
 import '../services/profile_service.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/helix_button.dart';
@@ -22,6 +24,11 @@ class _ScanScreenState extends State<ScanScreen>
   bool _isSaving = false;
   ScanResult? _lastScan;
   String? _errorMessage;
+
+  // Cached file so "Try Again" retries without re-opening the picker.
+  Uint8List? _cachedBytes;
+  String? _cachedFileName;
+
   late AnimationController _animController;
   late Animation<double> _fadeIn;
 
@@ -46,20 +53,31 @@ class _ScanScreenState extends State<ScanScreen>
     if (result == null) return;
 
     final pickedFile = result.files.first;
-    final fileName = pickedFile.name;
-
-    // On web, bytes are available directly.
-    // On native (Android/iOS), bytes is null — read from the file path.
-    final fileBytes = pickedFile.bytes ??
+    final bytes = pickedFile.bytes ??
         ((!kIsWeb && pickedFile.path != null)
             ? await File(pickedFile.path!).readAsBytes()
             : null);
 
-    if (fileBytes == null) {
+    if (bytes == null) {
       setState(() => _errorMessage = 'Could not read the selected file.');
       return;
     }
 
+    _cachedBytes = bytes;
+    _cachedFileName = pickedFile.name;
+    await _runScan(bytes, pickedFile.name);
+  }
+
+  Future<void> _retryWithCachedFile() async {
+    if (_cachedBytes == null || _cachedFileName == null) {
+      // Cache cleared — fall back to picker
+      await _scanReport();
+      return;
+    }
+    await _runScan(_cachedBytes!, _cachedFileName!);
+  }
+
+  Future<void> _runScan(Uint8List fileBytes, String fileName) async {
     setState(() {
       _isScanning = true;
       _lastScan = null;
@@ -68,18 +86,22 @@ class _ScanScreenState extends State<ScanScreen>
 
     try {
       final scan = await ProfileService.scanReport(fileBytes, fileName);
-      setState(() {
-        if (scan != null && scan.hasData) {
-          _lastScan = scan;
-        } else {
-          _errorMessage = 'Could not read the document. Try a clearer image.';
-        }
-      });
-      _animController.forward(from: 0);
+      if (mounted) {
+        setState(() {
+          if (scan != null && scan.hasData) {
+            _lastScan = scan;
+          } else {
+            _errorMessage = 'Could not read the document. Try a clearer image.';
+          }
+        });
+        _animController.forward(from: 0);
+      }
+    } on NetworkOfflineException catch (e) {
+      if (mounted) setState(() => _errorMessage = e.toString());
     } catch (e) {
-      setState(() => _errorMessage = 'Connection failed: $e');
+      if (mounted) setState(() => _errorMessage = 'Upload failed. Please try again.');
     } finally {
-      setState(() => _isScanning = false);
+      if (mounted) setState(() => _isScanning = false);
     }
   }
 
@@ -321,15 +343,24 @@ class _ScanScreenState extends State<ScanScreen>
                   ),
                 ),
 
-              // ── Scan again button ──
+              // ── Retry buttons ──
               if (_lastScan == null && !_isScanning && _errorMessage != null) ...[
                 const SizedBox(height: 8),
                 HelixButton(
-                  label: 'TRY AGAIN',
+                  label: _cachedBytes != null ? 'RETRY SAME FILE' : 'TRY AGAIN',
                   icon: Icons.refresh,
-                  onPressed: _scanReport,
+                  onPressed: _cachedBytes != null ? _retryWithCachedFile : _scanReport,
                   outlined: true,
                 ),
+                if (_cachedBytes != null) ...[
+                  const SizedBox(height: 10),
+                  HelixButton(
+                    label: 'CHOOSE DIFFERENT FILE',
+                    icon: Icons.upload_file,
+                    onPressed: _scanReport,
+                    outlined: true,
+                  ),
+                ],
               ],
             ],
           ),

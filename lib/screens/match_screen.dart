@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
 import '../config/app_constants.dart';
+import '../models/user.dart';
 import '../services/profile_service.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/helix_button.dart';
 
 /// Genetic compatibility checker screen.
+///
+/// The authenticated user's profile is loaded from the database — they only
+/// need to enter the partner's genotype and (optionally) rhesus factor.
 class MatchScreen extends StatefulWidget {
   const MatchScreen({super.key});
 
@@ -14,32 +18,46 @@ class MatchScreen extends StatefulWidget {
 }
 
 class _MatchScreenState extends State<MatchScreen> {
-  final _maleGenotypeController = TextEditingController();
-  final _maleBloodGroupController = TextEditingController();
-  final _femaleGenotypeController = TextEditingController();
-  final _femaleBloodGroupController = TextEditingController();
+  User? _userProfile;
+  bool _isLoadingProfile = true;
+
+  String _partnerGenotype = '';
+  String? _partnerRhesus;
+  String _userSex = 'male';
 
   bool _isChecking = false;
   Map<String, dynamic>? _result;
   String? _errorMessage;
 
-  final _genotypes = ['AA', 'AS', 'SS', 'AC', 'SC'];
-  final _bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+  static const _genotypes = ['AA', 'AS', 'SS', 'AC', 'SC'];
+  static const _rhesusOptions = ['POS', 'NEG'];
 
   @override
-  void dispose() {
-    _maleGenotypeController.dispose();
-    _maleBloodGroupController.dispose();
-    _femaleGenotypeController.dispose();
-    _femaleBloodGroupController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    _loadUserProfile();
+  }
+
+  Future<void> _loadUserProfile() async {
+    final profile = await ProfileService.fetchProfile();
+    if (mounted) {
+      setState(() {
+        _userProfile = profile;
+        _isLoadingProfile = false;
+      });
+    }
   }
 
   Future<void> _checkMatch() async {
-    if (_maleGenotypeController.text.isEmpty ||
-        _femaleGenotypeController.text.isEmpty) {
-      setState(
-          () => _errorMessage = 'Please fill in at least the genotype fields.');
+    if (_partnerGenotype.isEmpty) {
+      setState(() => _errorMessage = 'Please select the partner\'s genotype.');
+      return;
+    }
+
+    final myGenotype = _userProfile?.genotype;
+    if (myGenotype == null) {
+      setState(() => _errorMessage =
+          'Your genotype is not set. Update your profile first.');
       return;
     }
 
@@ -51,54 +69,43 @@ class _MatchScreenState extends State<MatchScreen> {
 
     try {
       final result = await ProfileService.checkMatch(
-        {
-          'genotype': _maleGenotypeController.text.trim().toUpperCase(),
-          'blood_group': _maleBloodGroupController.text.trim().toUpperCase(),
-        },
-        {
-          'genotype': _femaleGenotypeController.text.trim().toUpperCase(),
-          'blood_group': _femaleBloodGroupController.text.trim().toUpperCase(),
+        userSex: _userSex,
+        partnerProfile: {
+          'genotype': _partnerGenotype,
+          if (_partnerRhesus != null) 'rhesus_factor': _partnerRhesus,
         },
       );
-      setState(() => _result = result);
+      if (mounted) setState(() => _result = result);
     } catch (e) {
-      setState(() => _errorMessage = 'Failed to check compatibility: $e');
+      if (mounted) {
+        setState(() => _errorMessage = e.toString().replaceFirst('Exception: ', ''));
+      }
     } finally {
-      setState(() => _isChecking = false);
+      if (mounted) setState(() => _isChecking = false);
     }
   }
 
-  Color _getRiskColor(String? risk) {
-    switch (risk?.toLowerCase()) {
-      case 'low':
+  Color _statusColor(String? status) {
+    switch (status) {
       case 'safe':
-      case 'compatible':
         return AppConstants.successColor;
-      case 'medium':
-      case 'moderate':
+      case 'caution':
         return AppConstants.warningColor;
-      case 'high':
-      case 'dangerous':
-      case 'incompatible':
+      case 'danger':
         return AppConstants.errorColor;
       default:
         return AppConstants.accentBlue;
     }
   }
 
-  double _getRiskPercent(String? risk) {
-    switch (risk?.toLowerCase()) {
-      case 'low':
+  double _statusPercent(String? status) {
+    switch (status) {
       case 'safe':
-      case 'compatible':
         return 0.9;
-      case 'medium':
-      case 'moderate':
+      case 'caution':
         return 0.6;
-      case 'high':
-      case 'dangerous':
-      case 'incompatible':
-        return 0.25;
+      case 'danger':
+        return 0.2;
       default:
         return 0.5;
     }
@@ -110,146 +117,143 @@ class _MatchScreenState extends State<MatchScreen> {
       body: Container(
         decoration: const BoxDecoration(gradient: AppConstants.bgGradient),
         child: SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              // ── Header ──
-              const Text(
-                'Compatibility',
-                style: TextStyle(
-                  color: AppConstants.textPrimary,
-                  fontSize: 26,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'Compare genotypes to assess genetic compatibility',
-                style: TextStyle(
-                  color: AppConstants.textSecondary,
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: 28),
-
-              // ── Male Profile ──
-              _buildProfileCard(
-                title: 'Partner A',
-                icon: Icons.male,
-                gradient: AppConstants.accentGradient,
-                genotypeController: _maleGenotypeController,
-                bloodGroupController: _maleBloodGroupController,
-              ),
-              const SizedBox(height: 16),
-
-              // ── Female Profile ──
-              _buildProfileCard(
-                title: 'Partner B',
-                icon: Icons.female,
-                gradient: AppConstants.purpleGradient,
-                genotypeController: _femaleGenotypeController,
-                bloodGroupController: _femaleBloodGroupController,
-              ),
-              const SizedBox(height: 24),
-
-              // ── Check Button ──
-              HelixButton(
-                label: 'CHECK COMPATIBILITY',
-                icon: Icons.favorite,
-                isLoading: _isChecking,
-                onPressed: _checkMatch,
-                gradient: AppConstants.purpleGradient,
-              ),
-              const SizedBox(height: 24),
-
-              // ── Error ──
-              if (_errorMessage != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: AppConstants.errorColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: AppConstants.errorColor.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.error_outline,
-                          color: AppConstants.errorColor, size: 20),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          _errorMessage!,
-                          style: const TextStyle(
-                            color: AppConstants.errorColor, fontSize: 13),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              // ── Result ──
-              if (_result != null) _buildResultCard(),
-
-              // ── Educational Info ──
-              const SizedBox(height: 24),
-              Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: AppConstants.accentPurple.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: AppConstants.accentPurple.withValues(alpha: 0.2),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          child: _isLoadingProfile
+              ? const Center(child: CircularProgressIndicator())
+              : ListView(
+                  padding: const EdgeInsets.all(20),
                   children: [
-                    Row(
-                      children: [
-                        Icon(Icons.school_outlined,
-                            color: AppConstants.accentPurple.withValues(alpha: 0.7),
-                            size: 20),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Did You Know?',
-                          style: TextStyle(
-                            color: AppConstants.textPrimary,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
+                    // ── Header ──
                     const Text(
-                      'When both partners carry the sickle cell trait (AS), there is a 25% chance their child will have sickle cell disease (SS). Knowing your genotype before marriage can help prevent genetic disorders.',
+                      'Compatibility',
+                      style: TextStyle(
+                        color: AppConstants.textPrimary,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Compare genotypes to assess genetic compatibility',
                       style: TextStyle(
                         color: AppConstants.textSecondary,
-                        fontSize: 13,
-                        height: 1.6,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+
+                    // ── Your Profile (read-only from DB) ──
+                    _buildMyProfileCard(),
+                    const SizedBox(height: 16),
+
+                    // ── Sex selector for Rh check ──
+                    _buildSexSelector(),
+                    const SizedBox(height: 16),
+
+                    // ── Partner Profile ──
+                    _buildPartnerCard(),
+                    const SizedBox(height: 24),
+
+                    // ── Check Button ──
+                    HelixButton(
+                      label: 'CHECK COMPATIBILITY',
+                      icon: Icons.favorite,
+                      isLoading: _isChecking,
+                      onPressed: _checkMatch,
+                      gradient: AppConstants.purpleGradient,
+                    ),
+                    const SizedBox(height: 24),
+
+                    // ── Error ──
+                    if (_errorMessage != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: AppConstants.errorColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color:
+                                AppConstants.errorColor.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.error_outline,
+                                color: AppConstants.errorColor, size: 20),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                _errorMessage!,
+                                style: const TextStyle(
+                                    color: AppConstants.errorColor,
+                                    fontSize: 13),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // ── Result ──
+                    if (_result != null) _buildResultCard(),
+
+                    // ── Educational Info ──
+                    const SizedBox(height: 24),
+                    Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: AppConstants.accentPurple.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color:
+                              AppConstants.accentPurple.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.school_outlined,
+                                color: AppConstants.accentPurple
+                                    .withValues(alpha: 0.7),
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Did You Know?',
+                                style: TextStyle(
+                                  color: AppConstants.textPrimary,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          const Text(
+                            'When both partners carry the sickle cell trait (AS), there is a 25% chance their child will have sickle cell disease (SS). Knowing your genotype before marriage can help prevent genetic disorders.',
+                            style: TextStyle(
+                              color: AppConstants.textSecondary,
+                              fontSize: 13,
+                              height: 1.6,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-              ),
-            ],
-          ),
         ),
       ),
     );
   }
 
-  Widget _buildProfileCard({
-    required String title,
-    required IconData icon,
-    required LinearGradient gradient,
-    required TextEditingController genotypeController,
-    required TextEditingController bloodGroupController,
-  }) {
+  Widget _buildMyProfileCard() {
+    final genotype = _userProfile?.genotype;
+    final rhesus = _userProfile?.rhesus;
+
     return GlassCard(
       padding: const EdgeInsets.all(18),
       child: Column(
@@ -258,13 +262,111 @@ class _MatchScreenState extends State<MatchScreen> {
           Row(
             children: [
               ShaderMask(
-                shaderCallback: (bounds) => gradient.createShader(bounds),
-                child: Icon(icon, color: Colors.white, size: 22),
+                shaderCallback: (bounds) =>
+                    AppConstants.accentGradient.createShader(bounds),
+                child: const Icon(Icons.person, color: Colors.white, size: 22),
               ),
               const SizedBox(width: 8),
-              Text(
-                title,
-                style: const TextStyle(
+              const Text(
+                'Your Profile',
+                style: TextStyle(
+                  color: AppConstants.textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const Spacer(),
+              const Text(
+                'from your account',
+                style: TextStyle(
+                  color: AppConstants.textMuted,
+                  fontSize: 11,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          if (genotype == null)
+            const Text(
+              'Genotype not set — update your profile in the Profile tab before checking compatibility.',
+              style: TextStyle(color: AppConstants.warningColor, fontSize: 13),
+            )
+          else
+            Row(
+              children: [
+                _pill('Genotype: $genotype', AppConstants.accentGradient),
+                const SizedBox(width: 8),
+                if (rhesus != null)
+                  _pill('Rh: $rhesus', AppConstants.purpleGradient),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSexSelector() {
+    return GlassCard(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      child: Row(
+        children: [
+          const Text(
+            'Your role in Rh check:',
+            style: TextStyle(color: AppConstants.textSecondary, fontSize: 13),
+          ),
+          const SizedBox(width: 12),
+          _sexToggle('Male', 'male', AppConstants.accentGradient),
+          const SizedBox(width: 8),
+          _sexToggle('Female', 'female', AppConstants.purpleGradient),
+        ],
+      ),
+    );
+  }
+
+  Widget _sexToggle(String label, String value, LinearGradient gradient) {
+    final selected = _userSex == value;
+    return GestureDetector(
+      onTap: () => setState(() => _userSex = value),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          gradient: selected ? gradient : null,
+          color: selected ? null : AppConstants.bgPrimary,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: selected ? Colors.transparent : AppConstants.borderColor,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color:
+                selected ? AppConstants.bgPrimary : AppConstants.textSecondary,
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPartnerCard() {
+    return GlassCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              ShaderMask(
+                shaderCallback: (bounds) =>
+                    AppConstants.purpleGradient.createShader(bounds),
+                child: const Icon(Icons.people, color: Colors.white, size: 22),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Partner\'s Profile',
+                style: TextStyle(
                   color: AppConstants.textPrimary,
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -274,24 +376,24 @@ class _MatchScreenState extends State<MatchScreen> {
           ),
           const SizedBox(height: 16),
 
-          // Genotype chips
           const Text(
             'Genotype',
-            style: TextStyle(color: AppConstants.textSecondary, fontSize: 12),
+            style:
+                TextStyle(color: AppConstants.textSecondary, fontSize: 12),
           ),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: _genotypes.map((g) {
-              final selected = genotypeController.text == g;
+              final selected = _partnerGenotype == g;
               return GestureDetector(
-                onTap: () => setState(() => genotypeController.text = g),
+                onTap: () => setState(() => _partnerGenotype = g),
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 10),
                   decoration: BoxDecoration(
-                    gradient: selected ? gradient : null,
+                    gradient: selected ? AppConstants.purpleGradient : null,
                     color: selected ? null : AppConstants.bgPrimary,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
@@ -316,24 +418,24 @@ class _MatchScreenState extends State<MatchScreen> {
           ),
           const SizedBox(height: 16),
 
-          // Blood group chips
           const Text(
-            'Blood Group (optional)',
-            style: TextStyle(color: AppConstants.textSecondary, fontSize: 12),
+            'Rhesus Factor (optional)',
+            style:
+                TextStyle(color: AppConstants.textSecondary, fontSize: 12),
           ),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
-            runSpacing: 8,
-            children: _bloodGroups.map((bg) {
-              final selected = bloodGroupController.text == bg;
+            children: _rhesusOptions.map((rh) {
+              final selected = _partnerRhesus == rh;
               return GestureDetector(
-                onTap: () => setState(() => bloodGroupController.text = bg),
+                onTap: () => setState(() =>
+                    _partnerRhesus = selected ? null : rh),
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 10),
                   decoration: BoxDecoration(
-                    gradient: selected ? gradient : null,
+                    gradient: selected ? AppConstants.purpleGradient : null,
                     color: selected ? null : AppConstants.bgPrimary,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
@@ -343,13 +445,13 @@ class _MatchScreenState extends State<MatchScreen> {
                     ),
                   ),
                   child: Text(
-                    bg,
+                    rh,
                     style: TextStyle(
                       color: selected
                           ? AppConstants.bgPrimary
                           : AppConstants.textSecondary,
                       fontWeight: FontWeight.w600,
-                      fontSize: 12,
+                      fontSize: 13,
                     ),
                   ),
                 ),
@@ -362,18 +464,18 @@ class _MatchScreenState extends State<MatchScreen> {
   }
 
   Widget _buildResultCard() {
-    final risk = _result?['risk_level']?.toString() ?? 'Unknown';
-    final message = _result?['message']?.toString() ?? 'No details available.';
-    final compatibility =
-        _result?['compatibility']?.toString() ?? risk;
-    final riskColor = _getRiskColor(risk);
-    final riskPercent = _getRiskPercent(risk);
+    final status = _result?['status'] as String? ?? 'unknown';
+    final messages = (_result?['messages'] as List?)
+            ?.map((m) => m.toString())
+            .toList() ??
+        [];
+    final riskColor = _statusColor(status);
+    final riskPercent = _statusPercent(status);
 
     return GlassCard(
       borderColor: riskColor.withValues(alpha: 0.4),
       child: Column(
         children: [
-          // ── Gauge ──
           CircularPercentIndicator(
             radius: 60,
             lineWidth: 8,
@@ -390,7 +492,7 @@ class _MatchScreenState extends State<MatchScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  compatibility,
+                  status.toUpperCase(),
                   style: TextStyle(
                     color: riskColor,
                     fontSize: 11,
@@ -404,16 +506,15 @@ class _MatchScreenState extends State<MatchScreen> {
             circularStrokeCap: CircularStrokeCap.round,
           ),
           const SizedBox(height: 20),
-
-          // ── Risk Level ──
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
               color: riskColor.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              'Risk: $risk',
+              status.toUpperCase(),
               style: TextStyle(
                 color: riskColor,
                 fontWeight: FontWeight.w700,
@@ -422,18 +523,42 @@ class _MatchScreenState extends State<MatchScreen> {
             ),
           ),
           const SizedBox(height: 16),
-
-          // ── Message ──
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppConstants.textSecondary,
-              fontSize: 14,
-              height: 1.5,
+          ...messages.map(
+            (msg) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Text(
+                msg,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: AppConstants.textSecondary,
+                  fontSize: 14,
+                  height: 1.5,
+                ),
+              ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _pill(String label, LinearGradient gradient) {
+    return ShaderMask(
+      shaderCallback: (bounds) => gradient.createShader(bounds),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.white24),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            fontSize: 13,
+          ),
+        ),
       ),
     );
   }

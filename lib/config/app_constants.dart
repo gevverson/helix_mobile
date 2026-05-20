@@ -1,16 +1,28 @@
 import 'package:flutter/material.dart';
 
 /// Centralized app-wide constants.
-/// Change [baseUrl] when switching between environments.
+///
+/// Pass environment at build/run time via --dart-define:
+/// ```
+/// flutter run  --dart-define=API_BASE_URL=http://10.0.2.2:8000
+/// flutter build apk --dart-define=API_BASE_URL=https://helix-api-wc16.onrender.com
+///                   --dart-define=GOOGLE_CLIENT_ID=YOUR_CLIENT_ID
+/// ```
 class AppConstants {
   AppConstants._(); // Prevent instantiation
 
-  /// Backend API base URL.
-  /// - Web/Chrome: 'http://localhost:8000'
-  /// - Android Emulator: 'http://10.0.2.2:8000'
-  /// - Real device on same Wi-Fi: use your machine's local IP address on port 8000
-  // static const String baseUrl = 'https://helix-api-wc16.onrender.com';
-  static const String baseUrl = 'http://192.168.1.209:8000';
+  /// Backend API base URL — injected at compile time via --dart-define=API_BASE_URL.
+  /// Default targets the Android emulator loopback; override for real devices and production.
+  static const String baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://10.0.2.2:8000',
+  );
+
+  /// Google OAuth server client ID — injected at compile time via --dart-define=GOOGLE_CLIENT_ID.
+  static const String googleClientId = String.fromEnvironment(
+    'GOOGLE_CLIENT_ID',
+    defaultValue: '',
+  );
 
   static const String appName = 'Helix';
   static const String appVersion = '1.0.0';

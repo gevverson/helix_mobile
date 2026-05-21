@@ -6,14 +6,18 @@ import '../widgets/stat_card.dart';
 
 /// Home/overview screen showing health summary and quick actions.
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  final void Function(int tabIndex)? onNavigateTo;
+
+  const DashboardScreen({super.key, this.onNavigateTo});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
 class _DashboardScreenState extends State<DashboardScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
   User? _user;
   bool _isLoading = true;
   late AnimationController _animController;
@@ -54,6 +58,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(gradient: AppConstants.bgGradient),
@@ -187,9 +192,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                           title: 'Scan Medical Report',
                           subtitle: 'Upload a lab report to extract your genotype & blood group',
                           gradient: AppConstants.accentGradient,
-                          onTap: () {
-                            // Navigate to scan tab via parent
-                          },
+                          onTap: () => widget.onNavigateTo?.call(1),
                         ),
                         const SizedBox(height: 12),
 
@@ -198,9 +201,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                           title: 'Check Compatibility',
                           subtitle: 'Compare genotypes to assess genetic compatibility',
                           gradient: AppConstants.purpleGradient,
-                          onTap: () {
-                            // Navigate to match tab
-                          },
+                          onTap: () => widget.onNavigateTo?.call(2),
                         ),
                         const SizedBox(height: 28),
 

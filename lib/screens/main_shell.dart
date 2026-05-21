@@ -8,7 +8,7 @@ import 'scan_screen.dart';
 import 'match_screen.dart';
 import 'profile_screen.dart';
 
-/// Main shell with bottom navigation for authenticated users.
+/// Main shell with bottom navigation and swipe-between-tabs for authenticated users.
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
 
@@ -18,22 +18,18 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
-
-  final _screens = const [
-    DashboardScreen(),
-    ScanScreen(),
-    MatchScreen(),
-    ProfileScreen(),
-  ];
+  late final PageController _pageController;
 
   @override
   void initState() {
     super.initState();
+    _pageController = PageController();
     SessionManager.sessionExpired.addListener(_onSessionExpired);
   }
 
   @override
   void dispose() {
+    _pageController.dispose();
     SessionManager.sessionExpired.removeListener(_onSessionExpired);
     super.dispose();
   }
@@ -41,7 +37,6 @@ class _MainShellState extends State<MainShell> {
   void _onSessionExpired() {
     if (!SessionManager.sessionExpired.value) return;
     SessionManager.sessionExpired.value = false;
-
     if (!mounted) return;
     context.go(AppRouter.login);
     ScaffoldMessenger.of(context).showSnackBar(
@@ -53,15 +48,32 @@ class _MainShellState extends State<MainShell> {
     );
   }
 
+  void _navigateTo(int index) {
+    setState(() => _currentIndex = index);
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
+      body: PageView(
+        controller: _pageController,
+        physics: const ClampingScrollPhysics(),
+        onPageChanged: (index) => setState(() => _currentIndex = index),
+        children: [
+          DashboardScreen(onNavigateTo: _navigateTo),
+          const ScanScreen(),
+          const MatchScreen(),
+          const ProfileScreen(),
+        ],
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
+          color: AppConstants.bgSecondary,
           border: Border(
             top: BorderSide(
               color: AppConstants.borderColor.withValues(alpha: 0.5),
@@ -71,7 +83,17 @@ class _MainShellState extends State<MainShell> {
         ),
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
-          onTap: (index) => setState(() => _currentIndex = index),
+          onTap: _navigateTo,
+          backgroundColor: AppConstants.bgSecondary,
+          selectedItemColor: AppConstants.accentCyan,
+          unselectedItemColor: AppConstants.textMuted,
+          type: BottomNavigationBarType.fixed,
+          elevation: 0,
+          selectedLabelStyle: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
+          unselectedLabelStyle: const TextStyle(fontSize: 11),
           items: [
             _buildNavItem(Icons.dashboard_outlined, Icons.dashboard, 'Home'),
             _buildNavItem(Icons.document_scanner_outlined, Icons.document_scanner, 'Scan'),

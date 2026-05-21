@@ -23,6 +23,184 @@ class _ProfileScreenState extends State<ProfileScreen>
   bool get wantKeepAlive => true;
   User? _user;
   bool _isLoading = true;
+  bool _isSaving = false;
+
+  static const _genotypes = ['AA', 'AS', 'SS', 'AC', 'SC'];
+  static const _bloodGroups = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
+  static const _rhesus = ['POS', 'NEG'];
+
+  Future<void> _showEditProfileSheet() async {
+    String? selectedGenotype = _user?.genotype;
+    String? selectedBloodGroup = _user?.bloodGroup;
+    String? selectedRhesus = _user?.rhesus;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppConstants.bgSecondary,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.fromLTRB(
+            24, 20, 24, MediaQuery.of(ctx).viewInsets.bottom + 32,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Handle bar
+              Center(
+                child: Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(
+                    color: AppConstants.borderColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text('Edit Health Data',
+                style: TextStyle(color: AppConstants.textPrimary, fontSize: 20, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 24),
+
+              // Genotype
+              const Text('Genotype', style: TextStyle(color: AppConstants.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8, runSpacing: 8,
+                children: _genotypes.map((g) {
+                  final selected = g == selectedGenotype;
+                  return GestureDetector(
+                    onTap: () => setSheetState(() => selectedGenotype = g),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      decoration: BoxDecoration(
+                        gradient: selected ? AppConstants.purpleGradient : null,
+                        color: selected ? null : AppConstants.bgCard,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: selected ? Colors.transparent : AppConstants.borderColor,
+                        ),
+                      ),
+                      child: Text(g, style: TextStyle(
+                        color: selected ? Colors.white : AppConstants.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      )),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 20),
+
+              // Blood Group
+              const Text('Blood Group', style: TextStyle(color: AppConstants.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8, runSpacing: 8,
+                children: _bloodGroups.map((b) {
+                  final selected = b == selectedBloodGroup;
+                  return GestureDetector(
+                    onTap: () => setSheetState(() => selectedBloodGroup = b),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                        gradient: selected ? AppConstants.accentGradient : null,
+                        color: selected ? null : AppConstants.bgCard,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: selected ? Colors.transparent : AppConstants.borderColor,
+                        ),
+                      ),
+                      child: Text(b, style: TextStyle(
+                        color: selected ? AppConstants.bgPrimary : AppConstants.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      )),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 20),
+
+              // Rhesus
+              const Text('Rhesus Factor (optional)', style: TextStyle(color: AppConstants.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                children: _rhesus.map((r) {
+                  final selected = r == selectedRhesus;
+                  return GestureDetector(
+                    onTap: () => setSheetState(() => selectedRhesus = selected ? null : r),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: selected ? AppConstants.accentCyan.withValues(alpha: 0.2) : AppConstants.bgCard,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: selected ? AppConstants.accentCyan : AppConstants.borderColor,
+                        ),
+                      ),
+                      child: Text(r, style: TextStyle(
+                        color: selected ? AppConstants.accentCyan : AppConstants.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      )),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 28),
+
+              // Save button
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: AppConstants.accentGradient,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: ElevatedButton(
+                    onPressed: (selectedGenotype == null && selectedBloodGroup == null)
+                        ? null
+                        : () async {
+                            Navigator.pop(ctx);
+                            setState(() => _isSaving = true);
+                            final ok = await ProfileService.updateProfile(
+                              selectedGenotype ?? _user?.genotype ?? '',
+                              selectedBloodGroup ?? _user?.bloodGroup ?? '',
+                            );
+                            if (ok && mounted) {
+                              await _loadProfile();
+                            }
+                            if (!mounted) return;
+                            setState(() => _isSaving = false);
+                            if (ok) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Profile updated successfully'),
+                                  behavior: SnackBarBehavior.floating,
+                                  backgroundColor: AppConstants.successColor,
+                                ),
+                              );
+                            }
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      foregroundColor: AppConstants.bgPrimary,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: const Text('SAVE', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -156,13 +334,45 @@ class _ProfileScreenState extends State<ProfileScreen>
                       const SizedBox(height: 32),
 
                       // ── Health Data ──
-                      const Text(
-                        'Health Data',
-                        style: TextStyle(
-                          color: AppConstants.textPrimary,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Health Data',
+                            style: TextStyle(
+                              color: AppConstants.textPrimary,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          if (_isSaving)
+                            const SizedBox(
+                              width: 18, height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2, color: AppConstants.accentCyan,
+                              ),
+                            )
+                          else
+                            GestureDetector(
+                              onTap: _showEditProfileSheet,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: AppConstants.accentCyan.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: AppConstants.accentCyan.withValues(alpha: 0.3)),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.edit_outlined, color: AppConstants.accentCyan, size: 14),
+                                    SizedBox(width: 4),
+                                    Text('Edit', style: TextStyle(color: AppConstants.accentCyan, fontSize: 12, fontWeight: FontWeight.w600)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                       const SizedBox(height: 14),
 

@@ -157,7 +157,22 @@ class _LoginScreenState extends State<LoginScreen>
                                     return null;
                                   },
                                 ),
-                                const SizedBox(height: 24),
+                                const SizedBox(height: 10),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: GestureDetector(
+                                    onTap: () => context.go(AppRouter.forgotPassword),
+                                    child: const Text(
+                                      'Forgot password?',
+                                      style: TextStyle(
+                                        color: AppConstants.accentCyan,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
 
                                 // Error message
                                 if (authProvider.errorMessage != null) ...[

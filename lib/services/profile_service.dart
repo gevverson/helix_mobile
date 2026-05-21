@@ -63,11 +63,21 @@ class ProfileService {
     }
   }
 
-  /// Save genotype and blood group to the authenticated user's profile.
-  static Future<bool> updateProfile(String genotype, String bloodGroup) async {
+  /// Save genotype, blood group, and optionally rhesus factor to the user's profile.
+  static Future<bool> updateProfile(
+    String genotype,
+    String bloodGroup, {
+    String? rhesus,
+  }) async {
     final url = Uri.parse('${AppConstants.baseUrl}/api/v1/users/me/profile');
     final token = await AuthService.getToken();
     if (token == null) return false;
+
+    final body = <String, dynamic>{
+      'genotype': genotype,
+      'blood_group': bloodGroup,
+    };
+    if (rhesus != null) body['rhesus_factor'] = rhesus;
 
     try {
       final response = await _client.patch(
@@ -76,7 +86,7 @@ class ProfileService {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({'genotype': genotype, 'blood_group': bloodGroup}),
+        body: jsonEncode(body),
       );
       return response.statusCode == 200;
     } catch (_) {

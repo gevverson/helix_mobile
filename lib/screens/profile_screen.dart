@@ -169,6 +169,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                             final ok = await ProfileService.updateProfile(
                               selectedGenotype ?? _user?.genotype ?? '',
                               selectedBloodGroup ?? _user?.bloodGroup ?? '',
+                              rhesus: selectedRhesus,
                             );
                             if (ok && mounted) {
                               await _loadProfile();
@@ -395,6 +396,18 @@ class _ProfileScreenState extends State<ProfileScreen>
                               label: 'Blood Group',
                               value: _user?.bloodGroup ?? 'Not set',
                               gradient: AppConstants.accentGradient,
+                            ),
+                            Divider(
+                              color: AppConstants.borderColor.withValues(alpha: 0.3),
+                              height: 1,
+                            ),
+                            _buildInfoRow(
+                              icon: Icons.science_outlined,
+                              label: 'Rhesus Factor',
+                              value: _user?.rhesus != null
+                                  ? 'Rh ${_user!.rhesus}'
+                                  : 'Not set',
+                              gradient: AppConstants.purpleGradient,
                             ),
                           ],
                         ),

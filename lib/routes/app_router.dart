@@ -4,6 +4,7 @@ import '../services/auth_service.dart';
 import '../screens/splash_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/register_screen.dart';
+import '../screens/forgot_password_screen.dart';
 import '../screens/main_shell.dart';
 
 /// Centralized named-route definitions with authentication guards.
@@ -16,6 +17,7 @@ class AppRouter {
   static const String splash = '/';
   static const String login = '/login';
   static const String register = '/register';
+  static const String forgotPassword = '/forgot-password';
   static const String mainShell = '/main';
 
   static final router = GoRouter(
@@ -35,6 +37,10 @@ class AppRouter {
         pageBuilder: (context, state) => _slidePage(const RegisterScreen(), state),
       ),
       GoRoute(
+        path: forgotPassword,
+        pageBuilder: (context, state) => _slidePage(const ForgotPasswordScreen(), state),
+      ),
+      GoRoute(
         path: mainShell,
         pageBuilder: (context, state) => _fadePage(const MainShell(), state),
       ),
@@ -45,6 +51,7 @@ class AppRouter {
     final loggedIn = await AuthService.isLoggedIn();
     final onPublicRoute = state.matchedLocation == login ||
         state.matchedLocation == register ||
+        state.matchedLocation == forgotPassword ||
         state.matchedLocation == splash;
 
     if (!loggedIn && !onPublicRoute) return login;

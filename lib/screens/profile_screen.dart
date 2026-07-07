@@ -24,6 +24,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   User? _user;
   bool _isLoading = true;
   bool _isSaving = false;
+  bool _isDeleting = false;
 
   static const _genotypes = ['AA', 'AS', 'SS', 'AC', 'SC'];
   static const _bloodGroups = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
@@ -259,6 +260,58 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
+  Future<void> _handleDeleteAccount() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppConstants.bgCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Delete Account',
+          style: TextStyle(color: AppConstants.textPrimary),
+        ),
+        content: const Text(
+          'This permanently erases your account and all your health data — '
+          'genotype, blood group, and rhesus factor. This cannot be undone.',
+          style: TextStyle(color: AppConstants.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel',
+                style: TextStyle(color: AppConstants.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete Forever',
+                style: TextStyle(color: AppConstants.errorColor)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !mounted) return;
+
+    setState(() => _isDeleting = true);
+    final ok = await ProfileService.deleteAccount();
+    if (!mounted) return;
+
+    if (ok) {
+      final router = GoRouter.of(context);
+      await context.read<AuthProvider>().logout();
+      router.go(AppRouter.login);
+    } else {
+      setState(() => _isDeleting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not delete account. Please try again.'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppConstants.errorColor,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -467,7 +520,36 @@ class _ProfileScreenState extends State<ProfileScreen>
                         foregroundColor: Colors.white,
                         gradient: null,
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 8),
+
+                      // ── Delete Account (right to erasure) ──
+                      Center(
+                        child: _isDeleting
+                            ? const Padding(
+                                padding: EdgeInsets.all(10),
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppConstants.errorColor,
+                                  ),
+                                ),
+                              )
+                            : TextButton.icon(
+                                onPressed: _handleDeleteAccount,
+                                icon: const Icon(Icons.delete_forever_outlined,
+                                    color: AppConstants.errorColor, size: 18),
+                                label: const Text(
+                                  'Delete My Account',
+                                  style: TextStyle(
+                                    color: AppConstants.errorColor,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                      ),
+                      const SizedBox(height: 16),
 
                       // ── Version ──
                       Center(

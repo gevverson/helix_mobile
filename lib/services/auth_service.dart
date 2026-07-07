@@ -111,6 +111,7 @@ class AuthService {
     String password, {
     required bool consentHealthData,
     required bool consentCrossBorder,
+    required bool isOver18,
   }) async {
     final url = Uri.parse('${AppConstants.baseUrl}/api/v1/users');
 
@@ -124,6 +125,7 @@ class AuthService {
           'password': password,
           'consent_health_data': consentHealthData,
           'consent_cross_border': consentCrossBorder,
+          'is_over_18': isOver18,
           'bio_profile': {},
         }),
       ).timeout(const Duration(seconds: 10));

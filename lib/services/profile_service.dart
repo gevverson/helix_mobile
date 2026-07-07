@@ -36,6 +36,27 @@ class ProfileService {
     }
   }
 
+  /// Permanently delete the current user's account and all associated data
+  /// (right to erasure). Returns `true` on success.
+  static Future<bool> deleteAccount() async {
+    final url = Uri.parse('${AppConstants.baseUrl}/api/v1/users/me');
+    final token = await AuthService.getToken();
+    if (token == null) return false;
+
+    try {
+      final response = await _client.delete(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Upload a medical report image for OCR scanning.
   static Future<ScanResult?> scanReport(
       Uint8List fileBytes, String fileName) async {

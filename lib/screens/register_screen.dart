@@ -28,6 +28,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   double _passwordStrength = 0;
   bool _consentHealth = false;
   bool _consentCrossBorder = false;
+  bool _isOver18 = false;
 
   @override
   void initState() {
@@ -81,10 +82,11 @@ class _RegisterScreenState extends State<RegisterScreen>
   Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (!_consentHealth || !_consentCrossBorder) {
+    if (!_consentHealth || !_consentCrossBorder || !_isOver18) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please provide both consents to create an account.'),
+          content: Text(
+              'Please confirm you are 18+ and provide both consents to continue.'),
           behavior: SnackBarBehavior.floating,
           backgroundColor: AppConstants.errorColor,
         ),
@@ -99,6 +101,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       _passwordController.text,
       consentHealthData: _consentHealth,
       consentCrossBorder: _consentCrossBorder,
+      isOver18: _isOver18,
     );
 
     if (success && mounted) {
@@ -384,6 +387,13 @@ class _RegisterScreenState extends State<RegisterScreen>
                                   setState(() => _consentCrossBorder = v),
                               text:
                                   'I consent to my data being stored and processed on secure servers located outside Kenya (United States).',
+                            ),
+                            const SizedBox(height: 10),
+                            _buildConsentTile(
+                              value: _isOver18,
+                              onChanged: (v) => setState(() => _isOver18 = v),
+                              text:
+                                  'I confirm that I am at least 18 years old.',
                             ),
                             const SizedBox(height: 12),
                             Align(

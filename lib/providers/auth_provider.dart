@@ -62,6 +62,7 @@ class AuthProvider extends ChangeNotifier {
     String password, {
     required bool consentHealthData,
     required bool consentCrossBorder,
+    required bool isOver18,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -74,6 +75,7 @@ class AuthProvider extends ChangeNotifier {
         password,
         consentHealthData: consentHealthData,
         consentCrossBorder: consentCrossBorder,
+        isOver18: isOver18,
       );
       if (!success) {
         _errorMessage = 'Registration failed. Email may already be in use.';

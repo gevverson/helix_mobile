@@ -26,6 +26,8 @@ class _RegisterScreenState extends State<RegisterScreen>
   late Animation<double> _fadeIn;
 
   double _passwordStrength = 0;
+  bool _consentHealth = false;
+  bool _consentCrossBorder = false;
 
   @override
   void initState() {
@@ -79,11 +81,24 @@ class _RegisterScreenState extends State<RegisterScreen>
   Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
 
+    if (!_consentHealth || !_consentCrossBorder) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please provide both consents to create an account.'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppConstants.errorColor,
+        ),
+      );
+      return;
+    }
+
     final authProvider = context.read<AuthProvider>();
     final success = await authProvider.register(
       _nameController.text.trim(),
       _emailController.text.trim(),
       _passwordController.text,
+      consentHealthData: _consentHealth,
+      consentCrossBorder: _consentCrossBorder,
     );
 
     if (success && mounted) {
@@ -103,6 +118,89 @@ class _RegisterScreenState extends State<RegisterScreen>
       );
       if (context.mounted) context.go(AppRouter.login);
     }
+  }
+
+  Widget _buildConsentTile({
+    required bool value,
+    required ValueChanged<bool> onChanged,
+    required String text,
+  }) {
+    return GestureDetector(
+      onTap: () => onChanged(!value),
+      behavior: HitTestBehavior.opaque,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 24,
+            height: 24,
+            child: Checkbox(
+              value: value,
+              onChanged: (v) => onChanged(v ?? false),
+              activeColor: AppConstants.accentCyan,
+              checkColor: AppConstants.bgPrimary,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                color: AppConstants.textSecondary,
+                fontSize: 12.5,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPrivacyPolicy() {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppConstants.bgCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Privacy Policy',
+          style: TextStyle(color: AppConstants.textPrimary, fontSize: 18),
+        ),
+        content: const SingleChildScrollView(
+          child: Text(
+            'Helix handles genetic and health data — among the most sensitive '
+            'categories of personal data.\n\n'
+            'WHAT WE COLLECT: your name and email; your genotype, blood group, '
+            'and rhesus factor; and, if you scan a medical report, the image is '
+            'read by OCR and not retained.\n\n'
+            'HOW WE USE IT: only to run your compatibility checks and manage your '
+            'account. We never sell or share it with advertisers.\n\n'
+            'WHERE IT IS STORED: on secure servers in the United States, encrypted '
+            'at rest. You consent to this cross-border transfer at sign-up.\n\n'
+            'YOUR RIGHTS: view and update your data anytime, and permanently delete '
+            'your account and all data from the app ("Delete My Account").\n\n'
+            'CONTACT: gevversonkipkoech@gmail.com. Kenyan users may also contact the '
+            'Office of the Data Protection Commissioner (ODPC).\n\n'
+            'Helix is for users aged 18 and over.',
+            style: TextStyle(
+              color: AppConstants.textSecondary,
+              fontSize: 13,
+              height: 1.5,
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close',
+                style: TextStyle(color: AppConstants.accentCyan)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -270,6 +368,40 @@ class _RegisterScreenState extends State<RegisterScreen>
                               },
                             ),
                             const SizedBox(height: 24),
+
+                            // ── Consent (explicit, granular — no pre-ticking) ──
+                            _buildConsentTile(
+                              value: _consentHealth,
+                              onChanged: (v) =>
+                                  setState(() => _consentHealth = v),
+                              text:
+                                  'I consent to Helix processing my genetic and health data (genotype, blood group, rhesus) to provide compatibility results.',
+                            ),
+                            const SizedBox(height: 10),
+                            _buildConsentTile(
+                              value: _consentCrossBorder,
+                              onChanged: (v) =>
+                                  setState(() => _consentCrossBorder = v),
+                              text:
+                                  'I consent to my data being stored and processed on secure servers located outside Kenya (United States).',
+                            ),
+                            const SizedBox(height: 12),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: GestureDetector(
+                                onTap: _showPrivacyPolicy,
+                                child: const Text(
+                                  'Read our Privacy Policy',
+                                  style: TextStyle(
+                                    color: AppConstants.accentCyan,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
 
                             // Error message
                             if (authProvider.errorMessage != null) ...[

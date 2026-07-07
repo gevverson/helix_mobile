@@ -56,13 +56,25 @@ class AuthProvider extends ChangeNotifier {
   }
 
   /// Attempt registration. Returns `true` on success.
-  Future<bool> register(String name, String email, String password) async {
+  Future<bool> register(
+    String name,
+    String email,
+    String password, {
+    required bool consentHealthData,
+    required bool consentCrossBorder,
+  }) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final success = await AuthService.register(name, email, password);
+      final success = await AuthService.register(
+        name,
+        email,
+        password,
+        consentHealthData: consentHealthData,
+        consentCrossBorder: consentCrossBorder,
+      );
       if (!success) {
         _errorMessage = 'Registration failed. Email may already be in use.';
       }

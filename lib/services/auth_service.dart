@@ -105,7 +105,13 @@ class AuthService {
   }
 
   /// Register a new account. Returns `true` on success.
-  static Future<bool> register(String name, String email, String password) async {
+  static Future<bool> register(
+    String name,
+    String email,
+    String password, {
+    required bool consentHealthData,
+    required bool consentCrossBorder,
+  }) async {
     final url = Uri.parse('${AppConstants.baseUrl}/api/v1/users');
 
     try {
@@ -116,7 +122,8 @@ class AuthService {
           'full_name': name,
           'email': email,
           'password': password,
-          'consent': true,
+          'consent_health_data': consentHealthData,
+          'consent_cross_border': consentCrossBorder,
           'bio_profile': {},
         }),
       ).timeout(const Duration(seconds: 10));

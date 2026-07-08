@@ -226,9 +226,13 @@ class _LoginScreenState extends State<LoginScreen>
                                             final confirmed = await showHelixSignInModal(context);
                                             if (!confirmed || !mounted) return;
 
-                                            final success =
+                                            final result =
                                                 await authProvider.signInWithGoogle();
-                                            if (success && context.mounted) context.go(AppRouter.mainShell);
+                                            if (result.isSuccess && context.mounted) {
+                                              context.go(result.needsConsent
+                                                  ? AppRouter.consent
+                                                  : AppRouter.mainShell);
+                                            }
                                           },
                                     style: OutlinedButton.styleFrom(
                                       side: BorderSide(

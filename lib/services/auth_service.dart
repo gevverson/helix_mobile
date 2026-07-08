@@ -5,6 +5,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_constants.dart';
 import 'api_client.dart';
 
+/// Outcome of a Google sign-in attempt.
+class GoogleSignInResult {
+  /// Human-readable error, or null on success.
+  final String? error;
+
+  /// True when the signed-in user still has to complete the consent + 18+ gate
+  /// (a first-time Google user who skipped the registration form).
+  final bool needsConsent;
+
+  const GoogleSignInResult({this.error, this.needsConsent = false});
+
+  bool get isSuccess => error == null;
+}
+
 /// Handles all authentication-related API calls.
 class AuthService {
   static final GoogleSignIn _googleSignIn = GoogleSignIn(
@@ -46,8 +60,11 @@ class AuthService {
     }
   }
 
-  /// Authenticate with Google Sign-In. Returns error message or null on success.
-  static Future<String?> signInWithGoogle() async {
+  /// Authenticate with Google Sign-In.
+  ///
+  /// Returns a [GoogleSignInResult] — `isSuccess` is true when signed in, and
+  /// `needsConsent` is true when the user must still complete the consent gate.
+  static Future<GoogleSignInResult> signInWithGoogle() async {
     try {
       // Force account picker by signing out first
       await _googleSignIn.signOut();
@@ -55,13 +72,14 @@ class AuthService {
       final account = await _googleSignIn.signIn();
 
       if (account == null) {
-        return 'Google Sign-In was cancelled.';
+        return const GoogleSignInResult(error: 'Google Sign-In was cancelled.');
       }
 
       final auth = await account.authentication;
 
       if (auth.idToken == null) {
-        return 'Failed to retrieve secure token from Google. Please try again.';
+        return const GoogleSignInResult(
+            error: 'Failed to retrieve secure token from Google. Please try again.');
       }
 
       if (kDebugMode) {
@@ -82,13 +100,14 @@ class AuthService {
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(AppConstants.tokenKey, token);
-        return null; // success
+        return GoogleSignInResult(needsConsent: data['needs_consent'] == true);
       }
 
       if (kDebugMode) {
         debugPrint('AuthService: backend returned ${response.statusCode}');
       }
-      return 'Server error (${response.statusCode}). Please try again later.';
+      return GoogleSignInResult(
+          error: 'Server error (${response.statusCode}). Please try again later.');
     } catch (e) {
       if (kDebugMode) {
         debugPrint('AuthService: Google Sign-In error — $e');
@@ -96,11 +115,65 @@ class AuthService {
 
       final msg = e.toString();
       if (msg.contains('network_error')) {
-        return 'Network error. Please check your connection.';
+        return const GoogleSignInResult(error: 'Network error. Please check your connection.');
       } else if (msg.contains('DEVELOPER_ERROR')) {
-        return 'Configuration error. Please contact support.';
+        return const GoogleSignInResult(error: 'Configuration error. Please contact support.');
       }
-      return 'An unexpected error occurred during Google Sign-In.';
+      return const GoogleSignInResult(
+          error: 'An unexpected error occurred during Google Sign-In.');
+    }
+  }
+
+  /// Record the user's granular consents + 18+ confirmation (after Google
+  /// sign-in). Returns `true` on success.
+  static Future<bool> recordConsent({
+    required bool consentHealthData,
+    required bool consentCrossBorder,
+    required bool isOver18,
+  }) async {
+    final url = Uri.parse('${AppConstants.baseUrl}/api/v1/users/me/consent');
+    final token = await getToken();
+    if (token == null) return false;
+    try {
+      final response = await _client.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'consent_health_data': consentHealthData,
+          'consent_cross_border': consentCrossBorder,
+          'is_over_18': isOver18,
+        }),
+      ).timeout(const Duration(seconds: 15));
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Whether the logged-in user still needs to complete the consent gate.
+  /// Used on startup; fails open (returns false) so a logged-in user is never
+  /// stranded by a transient network error.
+  static Future<bool> needsConsent() async {
+    final url = Uri.parse('${AppConstants.baseUrl}/api/v1/users/me/consent');
+    final token = await getToken();
+    if (token == null) return false;
+    try {
+      final response = await _client.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 20));
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body)['needs_consent'] == true;
+      }
+      return false;
+    } catch (_) {
+      return false;
     }
   }
 

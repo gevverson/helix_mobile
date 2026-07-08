@@ -45,7 +45,16 @@ class _SplashScreenState extends State<SplashScreen>
     final isLoggedIn = await AuthService.isLoggedIn();
     if (!mounted) return;
 
-    context.go(isLoggedIn ? AppRouter.mainShell : AppRouter.login);
+    if (!isLoggedIn) {
+      context.go(AppRouter.login);
+      return;
+    }
+
+    // A logged-in user who hasn't consented yet (e.g. a Google sign-in that was
+    // interrupted before the gate) is routed to the consent screen first.
+    final needsConsent = await AuthService.needsConsent();
+    if (!mounted) return;
+    context.go(needsConsent ? AppRouter.consent : AppRouter.mainShell);
   }
 
   @override

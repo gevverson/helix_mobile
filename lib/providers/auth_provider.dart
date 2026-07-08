@@ -33,26 +33,39 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  /// Attempt Google Sign-In. Returns `true` on success.
-  Future<bool> signInWithGoogle() async {
+  /// Attempt Google Sign-In. Returns a [GoogleSignInResult] whose `isSuccess`
+  /// and `needsConsent` the caller uses to route to the app or the consent gate.
+  Future<GoogleSignInResult> signInWithGoogle() async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final error = await AuthService.signInWithGoogle();
-      if (error != null) {
-        _errorMessage = error;
-        return false;
+      final result = await AuthService.signInWithGoogle();
+      if (!result.isSuccess) {
+        _errorMessage = result.error;
       }
-      return true; // Null error means success
+      return result;
     } catch (e) {
       _errorMessage = 'Connection failed. Check your network. $e';
-      return false;
+      return GoogleSignInResult(error: _errorMessage);
     } finally {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  /// Record the granular consents + 18+ confirmation for a Google user.
+  Future<bool> recordConsent({
+    required bool consentHealthData,
+    required bool consentCrossBorder,
+    required bool isOver18,
+  }) {
+    return AuthService.recordConsent(
+      consentHealthData: consentHealthData,
+      consentCrossBorder: consentCrossBorder,
+      isOver18: isOver18,
+    );
   }
 
   /// Attempt registration. Returns `true` on success.

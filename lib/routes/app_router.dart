@@ -5,6 +5,7 @@ import '../screens/splash_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/register_screen.dart';
 import '../screens/forgot_password_screen.dart';
+import '../screens/consent_screen.dart';
 import '../screens/main_shell.dart';
 
 /// Centralized named-route definitions with authentication guards.
@@ -18,6 +19,7 @@ class AppRouter {
   static const String login = '/login';
   static const String register = '/register';
   static const String forgotPassword = '/forgot-password';
+  static const String consent = '/consent';
   static const String mainShell = '/main';
 
   static final router = GoRouter(
@@ -39,6 +41,10 @@ class AppRouter {
       GoRoute(
         path: forgotPassword,
         pageBuilder: (context, state) => _slidePage(const ForgotPasswordScreen(), state),
+      ),
+      GoRoute(
+        path: consent,
+        pageBuilder: (context, state) => _fadePage(const ConsentScreen(), state),
       ),
       GoRoute(
         path: mainShell,

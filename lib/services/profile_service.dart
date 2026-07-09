@@ -36,6 +36,37 @@ class ProfileService {
     }
   }
 
+  /// Save the user's dating profile (Phase 1): date of birth (18+), gender,
+  /// seeking, and bio. Returns `true` on success.
+  static Future<bool> updateDatingProfile({
+    required String dateOfBirth, // ISO yyyy-MM-dd
+    required String gender,
+    required String seeking,
+    String? bio,
+  }) async {
+    final url = Uri.parse('${AppConstants.baseUrl}/api/v1/users/me/dating-profile');
+    final token = await AuthService.getToken();
+    if (token == null) return false;
+    try {
+      final response = await _client.patch(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'date_of_birth': dateOfBirth,
+          'gender': gender,
+          'seeking': seeking,
+          if (bio != null && bio.isNotEmpty) 'bio': bio,
+        }),
+      );
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Permanently delete the current user's account and all associated data
   /// (right to erasure). Returns `true` on success.
   static Future<bool> deleteAccount() async {

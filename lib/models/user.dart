@@ -7,6 +7,13 @@ class User {
   final String? bloodGroup;
   final String? rhesus;
 
+  // Dating profile (Phase 1)
+  final String? dateOfBirth; // ISO yyyy-MM-dd
+  final int? age;
+  final String? gender;
+  final String? seeking;
+  final String? bio;
+
   const User({
     this.id,
     required this.email,
@@ -14,10 +21,16 @@ class User {
     this.genotype,
     this.bloodGroup,
     this.rhesus,
+    this.dateOfBirth,
+    this.age,
+    this.gender,
+    this.seeking,
+    this.bio,
   });
 
   /// Create a [User] from the API response:
-  /// { id, email, full_name, bio_profile: { genotype, blood_group, rhesus_factor } }
+  /// { id, email, full_name, date_of_birth, age, gender, seeking, bio,
+  ///   bio_profile: { genotype, blood_group, rhesus_factor } }
   factory User.fromJson(Map<String, dynamic> json) {
     final bio = json['bio_profile'] as Map<String, dynamic>?;
     return User(
@@ -27,6 +40,11 @@ class User {
       genotype: bio?['genotype'] as String?,
       bloodGroup: bio?['blood_group'] as String?,
       rhesus: bio?['rhesus_factor'] as String?,
+      dateOfBirth: json['date_of_birth'] as String?,
+      age: json['age'] as int?,
+      gender: json['gender'] as String?,
+      seeking: json['seeking'] as String?,
+      bio: json['bio'] as String?,
     );
   }
 
@@ -48,6 +66,11 @@ class User {
     String? genotype,
     String? bloodGroup,
     String? rhesus,
+    String? dateOfBirth,
+    int? age,
+    String? gender,
+    String? seeking,
+    String? bio,
   }) {
     return User(
       id: id ?? this.id,
@@ -56,6 +79,11 @@ class User {
       genotype: genotype ?? this.genotype,
       bloodGroup: bloodGroup ?? this.bloodGroup,
       rhesus: rhesus ?? this.rhesus,
+      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+      age: age ?? this.age,
+      gender: gender ?? this.gender,
+      seeking: seeking ?? this.seeking,
+      bio: bio ?? this.bio,
     );
   }
 }

@@ -204,6 +204,203 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
+  static String _cap(String? s) =>
+      (s == null || s.isEmpty) ? 'Not set' : s[0].toUpperCase() + s.substring(1);
+
+  static String _fmtDate(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  Future<void> _showEditDatingProfileSheet() async {
+    DateTime? dob = (_user?.dateOfBirth != null)
+        ? DateTime.tryParse(_user!.dateOfBirth!)
+        : null;
+    String? gender = _user?.gender;
+    String? seeking = _user?.seeking;
+    final bioController = TextEditingController(text: _user?.bio ?? '');
+
+    Widget chip(String value, String label, String? selectedVal, VoidCallback onTap,
+        {LinearGradient? gradient}) {
+      final selected = value == selectedVal;
+      return GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          decoration: BoxDecoration(
+            gradient: selected ? (gradient ?? AppConstants.accentGradient) : null,
+            color: selected ? null : AppConstants.bgCard,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: selected ? Colors.transparent : AppConstants.borderColor,
+            ),
+          ),
+          child: Text(label,
+              style: TextStyle(
+                color: selected ? AppConstants.bgPrimary : AppConstants.textPrimary,
+                fontWeight: FontWeight.w600,
+              )),
+        ),
+      );
+    }
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppConstants.bgSecondary,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) => Padding(
+          padding: EdgeInsets.fromLTRB(
+              24, 20, 24, MediaQuery.of(ctx).viewInsets.bottom + 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppConstants.borderColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text('Edit Dating Profile',
+                  style: TextStyle(
+                      color: AppConstants.textPrimary,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700)),
+              const SizedBox(height: 24),
+
+              const Text('Date of Birth',
+                  style: TextStyle(color: AppConstants.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 10),
+              GestureDetector(
+                onTap: () async {
+                  final now = DateTime.now();
+                  final picked = await showDatePicker(
+                    context: ctx,
+                    initialDate: dob ?? DateTime(now.year - 25, now.month, now.day),
+                    firstDate: DateTime(now.year - 100),
+                    lastDate: DateTime(now.year - 18, now.month, now.day),
+                  );
+                  if (picked != null) setSheet(() => dob = picked);
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+                  decoration: BoxDecoration(
+                    color: AppConstants.bgCard,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppConstants.borderColor),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.cake_outlined, color: AppConstants.textSecondary, size: 18),
+                      const SizedBox(width: 10),
+                      Text(
+                        dob != null ? _fmtDate(dob!) : 'Select your date of birth (18+)',
+                        style: TextStyle(
+                          color: dob != null ? AppConstants.textPrimary : AppConstants.textMuted,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              const Text('I am',
+                  style: TextStyle(color: AppConstants.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 10),
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                chip('male', 'Male', gender, () => setSheet(() => gender = 'male'), gradient: AppConstants.accentGradient),
+                chip('female', 'Female', gender, () => setSheet(() => gender = 'female'), gradient: AppConstants.purpleGradient),
+                chip('other', 'Other', gender, () => setSheet(() => gender = 'other')),
+              ]),
+              const SizedBox(height: 20),
+
+              const Text('Looking for',
+                  style: TextStyle(color: AppConstants.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 10),
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                chip('male', 'Men', seeking, () => setSheet(() => seeking = 'male'), gradient: AppConstants.accentGradient),
+                chip('female', 'Women', seeking, () => setSheet(() => seeking = 'female'), gradient: AppConstants.purpleGradient),
+                chip('everyone', 'Everyone', seeking, () => setSheet(() => seeking = 'everyone')),
+              ]),
+              const SizedBox(height: 20),
+
+              const Text('About me',
+                  style: TextStyle(color: AppConstants.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 10),
+              TextField(
+                controller: bioController,
+                maxLength: 300,
+                maxLines: 3,
+                style: const TextStyle(color: AppConstants.textPrimary),
+                decoration: const InputDecoration(
+                  hintText: 'Say something about yourself…',
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: AppConstants.accentGradient,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: ElevatedButton(
+                    onPressed: (dob == null || gender == null || seeking == null)
+                        ? null
+                        : () async {
+                            Navigator.pop(ctx);
+                            setState(() => _isSaving = true);
+                            final ok = await ProfileService.updateDatingProfile(
+                              dateOfBirth: _fmtDate(dob!),
+                              gender: gender!,
+                              seeking: seeking!,
+                              bio: bioController.text.trim(),
+                            );
+                            if (ok && mounted) await _loadProfile();
+                            if (!mounted) return;
+                            setState(() => _isSaving = false);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(ok
+                                    ? 'Dating profile saved'
+                                    : 'Could not save. Please try again.'),
+                                behavior: SnackBarBehavior.floating,
+                                backgroundColor: ok
+                                    ? AppConstants.successColor
+                                    : AppConstants.errorColor,
+                              ),
+                            );
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      foregroundColor: AppConstants.bgPrimary,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: const Text('SAVE',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -465,6 +662,85 @@ class _ProfileScreenState extends State<ProfileScreen>
                           ],
                         ),
                       ),
+                      const SizedBox(height: 28),
+
+                      // ── Dating Profile ──
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Dating Profile',
+                            style: TextStyle(
+                              color: AppConstants.textPrimary,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: _showEditDatingProfileSheet,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: AppConstants.accentPurple.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: AppConstants.accentPurple.withValues(alpha: 0.35)),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.edit_outlined, color: AppConstants.accentPurple, size: 14),
+                                  SizedBox(width: 4),
+                                  Text('Edit', style: TextStyle(color: AppConstants.accentPurple, fontSize: 12, fontWeight: FontWeight.w600)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      GlassCard(
+                        padding: const EdgeInsets.all(0),
+                        child: Column(
+                          children: [
+                            _buildInfoRow(
+                              icon: Icons.cake_outlined,
+                              label: 'Age',
+                              value: _user?.age?.toString() ?? 'Not set',
+                              gradient: AppConstants.accentGradient,
+                            ),
+                            Divider(color: AppConstants.borderColor.withValues(alpha: 0.3), height: 1),
+                            _buildInfoRow(
+                              icon: Icons.person_outline,
+                              label: 'Gender',
+                              value: _cap(_user?.gender),
+                              gradient: AppConstants.purpleGradient,
+                            ),
+                            Divider(color: AppConstants.borderColor.withValues(alpha: 0.3), height: 1),
+                            _buildInfoRow(
+                              icon: Icons.favorite_border,
+                              label: 'Looking for',
+                              value: _cap(_user?.seeking),
+                              gradient: AppConstants.accentGradient,
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (_user?.bio != null && _user!.bio!.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: AppConstants.bgCard,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: AppConstants.borderColor),
+                          ),
+                          child: Text(
+                            _user!.bio!,
+                            style: const TextStyle(color: AppConstants.textSecondary, fontSize: 14, height: 1.5),
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 28),
 
                       // ── Settings ──

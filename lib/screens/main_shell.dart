@@ -3,9 +3,9 @@ import 'package:go_router/go_router.dart';
 import '../config/app_constants.dart';
 import '../routes/app_router.dart';
 import '../services/session_manager.dart';
-import 'dashboard_screen.dart';
+import 'discovery_screen.dart';
+import 'matches_screen.dart';
 import 'scan_screen.dart';
-import 'match_screen.dart';
 import 'profile_screen.dart';
 
 /// Main shell with bottom navigation and swipe-between-tabs for authenticated users.
@@ -64,11 +64,11 @@ class _MainShellState extends State<MainShell> {
         controller: _pageController,
         physics: const ClampingScrollPhysics(),
         onPageChanged: (index) => setState(() => _currentIndex = index),
-        children: [
-          DashboardScreen(onNavigateTo: _navigateTo),
-          const ScanScreen(),
-          const MatchScreen(),
-          const ProfileScreen(),
+        children: const [
+          DiscoveryScreen(),
+          MatchesScreen(),
+          ScanScreen(),
+          ProfileScreen(),
         ],
       ),
       bottomNavigationBar: Container(
@@ -95,9 +95,9 @@ class _MainShellState extends State<MainShell> {
           ),
           unselectedLabelStyle: const TextStyle(fontSize: 11),
           items: [
-            _buildNavItem(Icons.dashboard_outlined, Icons.dashboard, 'Home'),
+            _buildNavItem(Icons.explore_outlined, Icons.explore, 'Discover'),
+            _buildNavItem(Icons.favorite_outline, Icons.favorite, 'Matches'),
             _buildNavItem(Icons.document_scanner_outlined, Icons.document_scanner, 'Scan'),
-            _buildNavItem(Icons.favorite_outline, Icons.favorite, 'Match'),
             _buildNavItem(Icons.person_outline, Icons.person, 'Profile'),
           ],
         ),

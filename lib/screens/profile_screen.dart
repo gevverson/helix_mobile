@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../config/app_constants.dart';
 import '../models/user.dart';
@@ -25,6 +26,8 @@ class _ProfileScreenState extends State<ProfileScreen>
   bool _isLoading = true;
   bool _isSaving = false;
   bool _isDeleting = false;
+  List<Map<String, dynamic>> _photos = [];
+  bool _photoBusy = false;
 
   static const _genotypes = ['AA', 'AS', 'SS', 'AC', 'SC'];
   static const _bloodGroups = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
@@ -410,15 +413,53 @@ class _ProfileScreenState extends State<ProfileScreen>
   Future<void> _loadProfile() async {
     try {
       final user = await ProfileService.fetchProfile();
+      final photos = await ProfileService.fetchPhotos();
       if (mounted) {
         setState(() {
           _user = user;
+          _photos = photos;
           _isLoading = false;
         });
       }
     } catch (_) {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _addPhoto() async {
+    final picker = ImagePicker();
+    final XFile? file = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1600,
+      imageQuality: 85,
+    );
+    if (file == null || !mounted) return;
+
+    setState(() => _photoBusy = true);
+    final bytes = await file.readAsBytes();
+    final url = await ProfileService.uploadPhoto(bytes, file.name, mimeType: file.mimeType);
+    if (!mounted) return;
+
+    if (url != null) {
+      await _loadProfile();
+      if (mounted) setState(() => _photoBusy = false);
+    } else {
+      setState(() => _photoBusy = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not upload photo. Please try again.'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppConstants.errorColor,
+        ),
+      );
+    }
+  }
+
+  Future<void> _deletePhoto(String id) async {
+    setState(() => _photoBusy = true);
+    final ok = await ProfileService.deletePhoto(id);
+    if (ok && mounted) await _loadProfile();
+    if (mounted) setState(() => _photoBusy = false);
   }
 
   Future<void> _handleLogout() async {
@@ -582,7 +623,32 @@ class _ProfileScreenState extends State<ProfileScreen>
                           ],
                         ),
                       ),
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 28),
+
+                      // ── Photos ──
+                      const Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Photos',
+                          style: TextStyle(
+                            color: AppConstants.textPrimary,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        height: 108,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          children: [
+                            for (final p in _photos) _photoThumb(p),
+                            _addPhotoTile(),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 28),
 
                       // ── Health Data ──
                       Row(
@@ -840,6 +906,102 @@ class _ProfileScreenState extends State<ProfileScreen>
                       const SizedBox(height: 10),
                     ],
                   ),
+                ),
+        ),
+      ),
+    );
+  }
+
+  Widget _photoThumb(Map<String, dynamic> p) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 10),
+      child: Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: Image.network(
+              p['url'] as String,
+              width: 100,
+              height: 108,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => Container(
+                width: 100,
+                height: 108,
+                color: AppConstants.bgCard,
+                child: const Icon(Icons.broken_image_outlined, color: AppConstants.textMuted),
+              ),
+              loadingBuilder: (c, child, prog) => prog == null
+                  ? child
+                  : Container(
+                      width: 100,
+                      height: 108,
+                      color: AppConstants.bgCard,
+                      child: const Center(
+                        child: SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: AppConstants.accentCyan),
+                        ),
+                      ),
+                    ),
+            ),
+          ),
+          Positioned(
+            top: 4,
+            right: 4,
+            child: GestureDetector(
+              onTap: _photoBusy ? null : () => _deletePhoto(p['id'] as String),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                child: const Icon(Icons.close, color: Colors.white, size: 14),
+              ),
+            ),
+          ),
+          if ((p['is_primary'] as bool?) ?? false)
+            Positioned(
+              bottom: 4,
+              left: 4,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppConstants.accentCyan,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text('Main',
+                    style: TextStyle(color: AppConstants.bgPrimary, fontSize: 9, fontWeight: FontWeight.w700)),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _addPhotoTile() {
+    return GestureDetector(
+      onTap: _photoBusy ? null : _addPhoto,
+      child: Container(
+        width: 100,
+        height: 108,
+        decoration: BoxDecoration(
+          color: AppConstants.bgCard,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppConstants.borderColor),
+        ),
+        child: Center(
+          child: _photoBusy
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: AppConstants.accentCyan),
+                )
+              : const Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.add_a_photo_outlined, color: AppConstants.accentCyan, size: 22),
+                    SizedBox(height: 4),
+                    Text('Add', style: TextStyle(color: AppConstants.textSecondary, fontSize: 12)),
+                  ],
                 ),
         ),
       ),

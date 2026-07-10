@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import '../config/app_constants.dart';
 import '../models/match_result.dart';
 import '../models/scan_result.dart';
@@ -33,6 +34,67 @@ class ProfileService {
       return null;
     } catch (_) {
       return null;
+    }
+  }
+
+  /// Upload a profile photo. Returns the photo's URL on success, else null.
+  static Future<String?> uploadPhoto(
+    Uint8List bytes,
+    String fileName, {
+    String? mimeType,
+  }) async {
+    final uri = Uri.parse('${AppConstants.baseUrl}/api/v1/users/me/photos');
+    final token = await AuthService.getToken();
+    if (token == null) return null;
+
+    final parts = (mimeType ?? 'image/jpeg').split('/');
+    final request = http.MultipartRequest('POST', uri);
+    request.headers['Authorization'] = 'Bearer $token';
+    request.files.add(http.MultipartFile.fromBytes(
+      'file',
+      bytes,
+      filename: fileName,
+      contentType: MediaType(parts.first, parts.length > 1 ? parts[1] : 'jpeg'),
+    ));
+
+    try {
+      final streamed = await _client.send(request);
+      final response = await http.Response.fromStream(streamed);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body)['url'] as String?;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Fetch the current user's photos: a list of { id, url, is_primary }.
+  static Future<List<Map<String, dynamic>>> fetchPhotos() async {
+    final url = Uri.parse('${AppConstants.baseUrl}/api/v1/users/me/photos');
+    final token = await AuthService.getToken();
+    if (token == null) return [];
+    try {
+      final response = await _client.get(url, headers: {'Authorization': 'Bearer $token'});
+      if (response.statusCode == 200) {
+        return (jsonDecode(response.body) as List).cast<Map<String, dynamic>>();
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Delete one of the user's photos by id. Returns `true` on success.
+  static Future<bool> deletePhoto(String id) async {
+    final url = Uri.parse('${AppConstants.baseUrl}/api/v1/users/me/photos/$id');
+    final token = await AuthService.getToken();
+    if (token == null) return false;
+    try {
+      final response = await _client.delete(url, headers: {'Authorization': 'Bearer $token'});
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
     }
   }
 

@@ -50,6 +50,70 @@ class DatingService {
     }
   }
 
+  /// People you've blocked: [{ user_id, name }].
+  static Future<List<Map<String, dynamic>>> fetchBlocks() async {
+    final headers = await _authHeaders();
+    if (headers == null) return [];
+    try {
+      final res = await _client.get(
+        Uri.parse('${AppConstants.baseUrl}/api/v1/blocks'),
+        headers: headers,
+      );
+      if (res.statusCode == 200) {
+        return (jsonDecode(res.body) as List).cast<Map<String, dynamic>>();
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Unblock a user. Returns `true` on success.
+  static Future<bool> unblockUser(String userId) async {
+    final headers = await _authHeaders();
+    if (headers == null) return false;
+    try {
+      final res = await _client.delete(
+        Uri.parse('${AppConstants.baseUrl}/api/v1/blocks/$userId'),
+        headers: headers,
+      );
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Block a user. Returns `true` on success.
+  static Future<bool> blockUser(String userId) async {
+    final headers = await _authHeaders();
+    if (headers == null) return false;
+    try {
+      final res = await _client.post(
+        Uri.parse('${AppConstants.baseUrl}/api/v1/blocks/$userId'),
+        headers: headers,
+      );
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Report a user with a reason (+ optional details). Returns `true` on success.
+  static Future<bool> reportUser(String userId, String reason, {String? details}) async {
+    final headers = await _authHeaders();
+    if (headers == null) return false;
+    try {
+      final res = await _client.post(
+        Uri.parse('${AppConstants.baseUrl}/api/v1/reports/$userId'),
+        headers: headers,
+        body: jsonEncode({'reason': reason, if (details != null && details.isNotEmpty) 'details': details}),
+      );
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Your matches: [{ match_id, user_id, name, age, photo_url, compatibility,
   /// can_unblur, message }]. Returns [] on error.
   static Future<List<Map<String, dynamic>>> fetchMatches() async {

@@ -7,6 +7,7 @@ import '../models/user.dart';
 import '../providers/auth_provider.dart';
 import '../routes/app_router.dart';
 import '../services/profile_service.dart';
+import 'blocked_users_screen.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/helix_button.dart';
 
@@ -842,9 +843,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                         ),
                       ),
                       _buildSettingsTile(
-                        icon: Icons.security_outlined,
-                        title: 'Privacy & Security',
-                        subtitle: 'Manage your data',
+                        icon: Icons.block_outlined,
+                        title: 'Blocked Users',
+                        subtitle: 'Manage who you\'ve blocked',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const BlockedUsersScreen()),
+                        ),
                       ),
                       _buildSettingsTile(
                         icon: Icons.help_outline,
@@ -1052,6 +1056,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     required String title,
     required String subtitle,
     Widget? trailing,
+    VoidCallback? onTap,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -1061,6 +1066,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         border: Border.all(color: AppConstants.borderColor),
       ),
       child: ListTile(
+        onTap: onTap,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         leading: Icon(icon, color: AppConstants.textSecondary, size: 22),

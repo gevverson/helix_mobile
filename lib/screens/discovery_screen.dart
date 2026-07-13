@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../config/app_constants.dart';
 import '../services/dating_service.dart';
+import '../widgets/safety_menu.dart';
 
 /// Browse potential matches — one card at a time. Photos are blurred; a
 /// compatibility badge is shown up front. Liking someone who liked you = a match.
@@ -194,6 +195,23 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
                   end: Alignment.bottomCenter,
                   colors: [Colors.transparent, Colors.black.withValues(alpha: 0.75)],
                 ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 12,
+            right: 12,
+            child: GestureDetector(
+              onTap: () => showSafetyMenu(
+                context,
+                userId: c['user_id'] as String,
+                name: name,
+                onChanged: _load,
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: const BoxDecoration(color: Colors.black38, shape: BoxShape.circle),
+                child: const Icon(Icons.more_horiz, color: Colors.white, size: 22),
               ),
             ),
           ),

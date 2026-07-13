@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../config/app_constants.dart';
 import '../services/dating_service.dart';
+import '../widgets/safety_menu.dart';
 
 /// Your matches. Photos are clear when you're genetically compatible, and stay
 /// blurred with a health advisory when the pairing is high-risk.
@@ -155,6 +156,18 @@ class _MatchesScreenState extends State<MatchesScreen>
                       ),
                     ),
                     _statusChip(status),
+                    GestureDetector(
+                      onTap: () => showSafetyMenu(
+                        context,
+                        userId: m['user_id'] as String,
+                        name: name,
+                        onChanged: _load,
+                      ),
+                      child: const Padding(
+                        padding: EdgeInsets.only(left: 6),
+                        child: Icon(Icons.more_horiz, color: AppConstants.textMuted, size: 20),
+                      ),
+                    ),
                   ],
                 ),
                 if (message != null && !canUnblur) ...[

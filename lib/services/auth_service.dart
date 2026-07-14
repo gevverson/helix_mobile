@@ -4,6 +4,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_constants.dart';
 import 'api_client.dart';
+import 'push_service.dart';
 
 /// Outcome of a Google sign-in attempt.
 class GoogleSignInResult {
@@ -211,6 +212,8 @@ class AuthService {
 
   /// Remove the stored auth token (log out).
   static Future<void> logout() async {
+    // Stop pushes to this device first — needs the token that's about to be cleared.
+    await PushService.unregister();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(AppConstants.tokenKey);
   }

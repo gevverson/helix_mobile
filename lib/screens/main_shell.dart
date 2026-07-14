@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../config/app_constants.dart';
 import '../routes/app_router.dart';
 import '../services/session_manager.dart';
+import '../services/push_service.dart';
 import 'discovery_screen.dart';
 import 'matches_screen.dart';
 import 'scan_screen.dart';
@@ -25,6 +26,8 @@ class _MainShellState extends State<MainShell> {
     super.initState();
     _pageController = PageController();
     SessionManager.sessionExpired.addListener(_onSessionExpired);
+    // Register this device for push now that the user is authenticated.
+    PushService.init();
   }
 
   @override

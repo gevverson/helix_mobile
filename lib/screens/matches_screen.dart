@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../config/app_constants.dart';
 import '../services/dating_service.dart';
 import '../widgets/safety_menu.dart';
+import 'chat_screen.dart';
 
 /// Your matches. Photos are clear when you're genetically compatible, and stay
 /// blurred with a health advisory when the pairing is high-risk.
@@ -88,8 +89,11 @@ class _MatchesScreenState extends State<MatchesScreen>
     final canUnblur = m['can_unblur'] == true;
     final status = m['compatibility'] as String?;
     final message = m['message'] as String?;
+    final unread = m['unread_count'] as int? ?? 0;
 
-    return Container(
+    return GestureDetector(
+      onTap: () => _openChat(m, name),
+      child: Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: AppConstants.bgCard,
@@ -131,6 +135,28 @@ class _MatchesScreenState extends State<MatchesScreen>
                           Icon(Icons.lock_outline, color: Colors.white, size: 13),
                           SizedBox(width: 4),
                           Text('Locked', style: TextStyle(color: Colors.white, fontSize: 11)),
+                        ],
+                      ),
+                    ),
+                  ),
+                if (unread > 0)
+                  Positioned(
+                    top: 10,
+                    left: 10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: AppConstants.accentCyan,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.chat_bubble, color: Colors.black, size: 12),
+                          const SizedBox(width: 5),
+                          Text('$unread new',
+                              style: const TextStyle(
+                                  color: Colors.black, fontSize: 11, fontWeight: FontWeight.w800)),
                         ],
                       ),
                     ),
@@ -199,12 +225,48 @@ class _MatchesScreenState extends State<MatchesScreen>
                     ),
                   ),
                 ],
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(
+                      unread > 0 ? Icons.chat_bubble : Icons.chat_bubble_outline,
+                      color: unread > 0 ? AppConstants.accentCyan : AppConstants.textMuted,
+                      size: 15,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      unread > 0 ? '$unread new message${unread == 1 ? '' : 's'}' : 'Tap to chat',
+                      style: TextStyle(
+                        color: unread > 0 ? AppConstants.accentCyan : AppConstants.textMuted,
+                        fontSize: 12.5,
+                        fontWeight: unread > 0 ? FontWeight.w700 : FontWeight.w500,
+                      ),
+                    ),
+                    const Spacer(),
+                    const Icon(Icons.arrow_forward_ios, color: AppConstants.textMuted, size: 12),
+                  ],
+                ),
               ],
             ),
           ),
         ],
       ),
+      ),
     );
+  }
+
+  void _openChat(Map<String, dynamic> m, String name) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ChatScreen(
+          matchId: m['match_id'] as String,
+          otherUserId: m['user_id'] as String,
+          name: name,
+        ),
+      ),
+    );
+    // Refresh unread counts after returning from the thread.
+    if (mounted) _load();
   }
 
   Widget _placeholder(String name) {

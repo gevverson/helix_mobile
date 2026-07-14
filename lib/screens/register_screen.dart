@@ -30,6 +30,8 @@ class _RegisterScreenState extends State<RegisterScreen>
   bool _consentCrossBorder = false;
   bool _isOver18 = false;
 
+  bool get _allConsented => _consentHealth && _consentCrossBorder && _isOver18;
+
   @override
   void initState() {
     super.initState();
@@ -444,14 +446,21 @@ class _RegisterScreenState extends State<RegisterScreen>
                               const SizedBox(height: 16),
                             ],
 
-                            // Register button
+                            // Register button — greyed until all consents ticked.
                             HelixButton(
                               label: 'CREATE ACCOUNT',
                               icon: Icons.person_add,
                               isLoading: authProvider.isLoading,
-                              onPressed: _handleRegister,
+                              onPressed: _allConsented ? _handleRegister : null,
                               gradient: AppConstants.purpleGradient,
                             ),
+                            if (!_allConsented) ...[
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Tick all three consents above to create your account.',
+                                style: TextStyle(color: AppConstants.textMuted, fontSize: 12),
+                              ),
+                            ],
                           ],
                         ),
                       ),

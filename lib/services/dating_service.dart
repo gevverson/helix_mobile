@@ -114,8 +114,47 @@ class DatingService {
     }
   }
 
+  /// The message thread for a match: [{ id, match_id, sender_id, body, read,
+  /// created_at }] oldest-first. Fetching also marks incoming messages read.
+  /// Returns [] on error.
+  static Future<List<Map<String, dynamic>>> fetchMessages(String matchId) async {
+    final headers = await _authHeaders();
+    if (headers == null) return [];
+    try {
+      final res = await _client.get(
+        Uri.parse('${AppConstants.baseUrl}/api/v1/matches/$matchId/messages'),
+        headers: headers,
+      );
+      if (res.statusCode == 200) {
+        return (jsonDecode(res.body) as List).cast<Map<String, dynamic>>();
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Send a message in a match thread. Returns the created message, or null on error.
+  static Future<Map<String, dynamic>?> sendMessage(String matchId, String body) async {
+    final headers = await _authHeaders();
+    if (headers == null) return null;
+    try {
+      final res = await _client.post(
+        Uri.parse('${AppConstants.baseUrl}/api/v1/matches/$matchId/messages'),
+        headers: headers,
+        body: jsonEncode({'body': body}),
+      );
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body) as Map<String, dynamic>;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Your matches: [{ match_id, user_id, name, age, photo_url, compatibility,
-  /// can_unblur, message }]. Returns [] on error.
+  /// can_unblur, message, unread_count }]. Returns [] on error.
   static Future<List<Map<String, dynamic>>> fetchMatches() async {
     final headers = await _authHeaders();
     if (headers == null) return [];

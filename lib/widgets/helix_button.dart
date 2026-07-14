@@ -27,8 +27,12 @@ class HelixButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fgColor = foregroundColor ?? AppConstants.bgPrimary;
+    // Disabled = no handler and not mid-load. Render it visibly greyed so users
+    // can see the action isn't available yet (e.g. consent boxes not all ticked).
+    final disabled = onPressed == null && !isLoading;
 
     if (outlined) {
+      final outlineColor = disabled ? AppConstants.textMuted : AppConstants.accentCyan;
       return SizedBox(
         width: double.infinity,
         height: 54,
@@ -42,8 +46,9 @@ class HelixButton extends StatelessWidget {
             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
           ),
           style: OutlinedButton.styleFrom(
-            foregroundColor: AppConstants.accentCyan,
-            side: const BorderSide(color: AppConstants.accentCyan, width: 1.5),
+            foregroundColor: outlineColor,
+            disabledForegroundColor: AppConstants.textMuted,
+            side: BorderSide(color: outlineColor, width: 1.5),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
             ),
@@ -53,40 +58,47 @@ class HelixButton extends StatelessWidget {
     }
 
     // Gradient or solid button
+    final contentColor = disabled ? AppConstants.textMuted : fgColor;
     return SizedBox(
       width: double.infinity,
       height: 54,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          gradient: gradient ?? (backgroundColor == null ? AppConstants.accentGradient : null),
-          color: gradient == null ? backgroundColor : null,
+          // Greyed flat fill when disabled — no gradient, no glow.
+          gradient: disabled ? null : (gradient ?? (backgroundColor == null ? AppConstants.accentGradient : null)),
+          color: disabled ? AppConstants.bgElevated : (gradient == null ? backgroundColor : null),
           borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: (gradient?.colors.first ?? backgroundColor ?? AppConstants.accentCyan)
-                  .withValues(alpha: 0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          border: disabled ? Border.all(color: AppConstants.borderColor) : null,
+          boxShadow: disabled
+              ? null
+              : [
+                  BoxShadow(
+                    color: (gradient?.colors.first ?? backgroundColor ?? AppConstants.accentCyan)
+                        .withValues(alpha: 0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
         ),
         child: ElevatedButton.icon(
           onPressed: isLoading ? null : onPressed,
           icon: isLoading
               ? _loadingIndicator(fgColor)
-              : (icon != null ? Icon(icon, size: 20) : const SizedBox.shrink()),
+              : (icon != null ? Icon(icon, size: 20, color: contentColor) : const SizedBox.shrink()),
           label: Text(
             isLoading ? 'Please wait...' : label,
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w700,
-              color: isLoading ? fgColor.withValues(alpha: 0.5) : fgColor,
+              color: isLoading ? fgColor.withValues(alpha: 0.5) : contentColor,
             ),
           ),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.transparent,
             shadowColor: Colors.transparent,
             foregroundColor: fgColor,
+            disabledForegroundColor: AppConstants.textMuted,
+            disabledBackgroundColor: Colors.transparent,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
             ),

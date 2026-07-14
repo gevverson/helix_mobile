@@ -22,6 +22,8 @@ class _ConsentScreenState extends State<ConsentScreen> {
   bool _isOver18 = false;
   bool _submitting = false;
 
+  bool get _allConsented => _consentHealth && _consentCrossBorder && _isOver18;
+
   Future<void> _continue() async {
     if (!_consentHealth || !_consentCrossBorder || !_isOver18) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -128,9 +130,17 @@ class _ConsentScreenState extends State<ConsentScreen> {
                     label: 'CONTINUE',
                     icon: Icons.check_circle_outline,
                     isLoading: _submitting,
-                    onPressed: _continue,
+                    // Greyed out until all three consents are ticked.
+                    onPressed: _allConsented ? _continue : null,
                     gradient: AppConstants.accentGradient,
                   ),
+                  if (!_allConsented) ...[
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Tick all three above to continue.',
+                      style: TextStyle(color: AppConstants.textMuted, fontSize: 12),
+                    ),
+                  ],
                   const SizedBox(height: 8),
                   Center(
                     child: TextButton(

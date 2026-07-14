@@ -221,6 +221,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     String? gender = _user?.gender;
     String? seeking = _user?.seeking;
     final bioController = TextEditingController(text: _user?.bio ?? '');
+    final cityController = TextEditingController(text: _user?.city ?? '');
 
     Widget chip(String value, String label, String? selectedVal, VoidCallback onTap,
         {LinearGradient? gradient}) {
@@ -352,6 +353,24 @@ class _ProfileScreenState extends State<ProfileScreen>
               ),
               const SizedBox(height: 8),
 
+              const Text('City (optional)',
+                  style: TextStyle(color: AppConstants.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 6),
+              const Text('Coarse location for distance filtering — no GPS is used.',
+                  style: TextStyle(color: AppConstants.textMuted, fontSize: 11.5)),
+              const SizedBox(height: 10),
+              TextField(
+                controller: cityController,
+                maxLength: 100,
+                textCapitalization: TextCapitalization.words,
+                style: const TextStyle(color: AppConstants.textPrimary),
+                decoration: const InputDecoration(
+                  hintText: 'e.g. Nairobi',
+                  prefixIcon: Icon(Icons.place_outlined, color: AppConstants.textSecondary, size: 18),
+                ),
+              ),
+              const SizedBox(height: 8),
+
               SizedBox(
                 width: double.infinity,
                 height: 52,
@@ -371,6 +390,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                               gender: gender!,
                               seeking: seeking!,
                               bio: bioController.text.trim(),
+                              city: cityController.text.trim(),
                             );
                             if (ok && mounted) await _loadProfile();
                             if (!mounted) return;

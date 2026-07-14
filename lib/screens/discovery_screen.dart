@@ -22,6 +22,13 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
   bool _loading = true;
   bool _busy = false;
 
+  // Active filters (null = no filter).
+  int? _minAge;
+  int? _maxAge;
+  String? _city;
+
+  bool get _hasFilters => _minAge != null || _maxAge != null || (_city?.isNotEmpty ?? false);
+
   @override
   void initState() {
     super.initState();
@@ -30,13 +37,36 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
 
   Future<void> _load() async {
     setState(() => _loading = true);
-    final list = await DatingService.fetchDiscovery();
+    final list = await DatingService.fetchDiscovery(
+      minAge: _minAge,
+      maxAge: _maxAge,
+      city: _city,
+    );
     if (!mounted) return;
     setState(() {
       _candidates = list;
       _index = 0;
       _loading = false;
     });
+  }
+
+  Future<void> _openFilters() async {
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      backgroundColor: AppConstants.bgCard,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _FilterSheet(minAge: _minAge, maxAge: _maxAge, city: _city),
+    );
+    if (result == null) return; // dismissed without applying
+    setState(() {
+      _minAge = result['min_age'] as int?;
+      _maxAge = result['max_age'] as int?;
+      _city = result['city'] as String?;
+    });
+    _load();
   }
 
   void _pass() {
@@ -99,7 +129,17 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
     super.build(context);
     return Scaffold(
       backgroundColor: AppConstants.bgPrimary,
-      appBar: AppBar(title: const Text('Discover')),
+      appBar: AppBar(
+        title: const Text('Discover'),
+        actions: [
+          IconButton(
+            tooltip: 'Filters',
+            icon: Icon(_hasFilters ? Icons.filter_alt : Icons.filter_alt_outlined,
+                color: _hasFilters ? AppConstants.accentCyan : AppConstants.textSecondary),
+            onPressed: _openFilters,
+          ),
+        ],
+      ),
       body: Container(
         decoration: const BoxDecoration(gradient: AppConstants.bgGradient),
         child: SafeArea(child: _buildBody()),
@@ -151,17 +191,25 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
         children: [
           const Icon(Icons.explore_off_outlined, color: AppConstants.textMuted, size: 56),
           const SizedBox(height: 16),
-          const Text('No more people right now',
-              style: TextStyle(color: AppConstants.textPrimary, fontSize: 18, fontWeight: FontWeight.w700)),
+          Text(_hasFilters ? 'No one matches your filters' : 'No more people right now',
+              style: const TextStyle(color: AppConstants.textPrimary, fontSize: 18, fontWeight: FontWeight.w700)),
           const SizedBox(height: 8),
-          const Text('Check back later for new matches.',
-              style: TextStyle(color: AppConstants.textSecondary)),
+          Text(_hasFilters ? 'Try widening your age range or clearing the city.' : 'Check back later for new matches.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppConstants.textSecondary)),
           const SizedBox(height: 20),
-          TextButton.icon(
-            onPressed: _load,
-            icon: const Icon(Icons.refresh, color: AppConstants.accentCyan),
-            label: const Text('Refresh', style: TextStyle(color: AppConstants.accentCyan)),
-          ),
+          if (_hasFilters)
+            TextButton.icon(
+              onPressed: _openFilters,
+              icon: const Icon(Icons.filter_alt_outlined, color: AppConstants.accentCyan),
+              label: const Text('Adjust filters', style: TextStyle(color: AppConstants.accentCyan)),
+            )
+          else
+            TextButton.icon(
+              onPressed: _load,
+              icon: const Icon(Icons.refresh, color: AppConstants.accentCyan),
+              label: const Text('Refresh', style: TextStyle(color: AppConstants.accentCyan)),
+            ),
         ],
       ),
     );
@@ -170,6 +218,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
   Widget _card(Map<String, dynamic> c) {
     final name = c['name'] as String? ?? 'Someone';
     final age = c['age'] as int?;
+    final city = c['city'] as String?;
     final photoUrl = c['photo_url'] as String?;
     return ClipRRect(
       borderRadius: BorderRadius.circular(24),
@@ -232,6 +281,17 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
                     fontWeight: FontWeight.w800,
                   ),
                 ),
+                if (city != null && city.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.place_outlined, color: Colors.white70, size: 14),
+                      const SizedBox(width: 4),
+                      Text(city, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 4),
                 const Text('Photo unlocks when you match & are compatible',
                     style: TextStyle(color: Colors.white70, fontSize: 12)),
@@ -322,6 +382,151 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
           ],
         ),
         child: Icon(icon, color: filled ? Colors.white : color, size: 30),
+      ),
+    );
+  }
+}
+
+/// Bottom sheet for discovery filters: an age range (18–80, where 80 = "80+")
+/// and a coarse city. Returns {min_age, max_age, city} on apply (values are null
+/// when unset), or {all null} on clear. Returns null if dismissed.
+class _FilterSheet extends StatefulWidget {
+  final int? minAge;
+  final int? maxAge;
+  final String? city;
+
+  const _FilterSheet({this.minAge, this.maxAge, this.city});
+
+  @override
+  State<_FilterSheet> createState() => _FilterSheetState();
+}
+
+class _FilterSheetState extends State<_FilterSheet> {
+  static const double _min = 18;
+  static const double _max = 80; // 80 represents "80+" (no upper bound)
+  late RangeValues _range;
+  late final TextEditingController _cityCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _range = RangeValues(
+      (widget.minAge ?? _min.toInt()).toDouble().clamp(_min, _max),
+      (widget.maxAge ?? _max.toInt()).toDouble().clamp(_min, _max),
+    );
+    _cityCtrl = TextEditingController(text: widget.city ?? '');
+  }
+
+  @override
+  void dispose() {
+    _cityCtrl.dispose();
+    super.dispose();
+  }
+
+  String get _maxLabel => _range.end >= _max ? '80+' : '${_range.end.round()}';
+
+  void _apply() {
+    final start = _range.start.round();
+    final end = _range.end.round();
+    final city = _cityCtrl.text.trim();
+    Navigator.pop(context, {
+      'min_age': start <= _min ? null : start,   // 18 = no lower bound
+      'max_age': end >= _max ? null : end,       // 80 = no upper bound
+      'city': city.isEmpty ? null : city,
+    });
+  }
+
+  void _clear() => Navigator.pop(context, {'min_age': null, 'max_age': null, 'city': null});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20, right: 20, top: 16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                color: AppConstants.borderColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text('Filters',
+              style: TextStyle(color: AppConstants.textPrimary, fontSize: 18, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Age', style: TextStyle(color: AppConstants.textSecondary, fontWeight: FontWeight.w600)),
+              Text('${_range.start.round()} – $_maxLabel',
+                  style: const TextStyle(color: AppConstants.accentCyan, fontWeight: FontWeight.w700)),
+            ],
+          ),
+          RangeSlider(
+            values: _range,
+            min: _min,
+            max: _max,
+            divisions: (_max - _min).toInt(),
+            activeColor: AppConstants.accentCyan,
+            inactiveColor: AppConstants.borderColor,
+            labels: RangeLabels('${_range.start.round()}', _maxLabel),
+            onChanged: (v) => setState(() => _range = v),
+          ),
+          const SizedBox(height: 12),
+          const Text('City', style: TextStyle(color: AppConstants.textSecondary, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _cityCtrl,
+            textCapitalization: TextCapitalization.words,
+            style: const TextStyle(color: AppConstants.textPrimary),
+            decoration: InputDecoration(
+              hintText: 'e.g. Nairobi',
+              hintStyle: const TextStyle(color: AppConstants.textMuted),
+              filled: true,
+              fillColor: AppConstants.bgElevated,
+              prefixIcon: const Icon(Icons.place_outlined, color: AppConstants.textMuted),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+            onSubmitted: (_) => _apply(),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _clear,
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppConstants.borderColor),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: const Text('Clear', style: TextStyle(color: AppConstants.textSecondary)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: _apply,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppConstants.accentCyan,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: const Text('Apply', style: TextStyle(color: Colors.black, fontWeight: FontWeight.w800)),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

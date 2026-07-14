@@ -105,6 +105,7 @@ class ProfileService {
     required String gender,
     required String seeking,
     String? bio,
+    String? city,
   }) async {
     final url = Uri.parse('${AppConstants.baseUrl}/api/v1/users/me/dating-profile');
     final token = await AuthService.getToken();
@@ -121,6 +122,7 @@ class ProfileService {
           'gender': gender,
           'seeking': seeking,
           if (bio != null && bio.isNotEmpty) 'bio': bio,
+          if (city != null && city.isNotEmpty) 'city': city,
         }),
       );
       return response.statusCode == 200;

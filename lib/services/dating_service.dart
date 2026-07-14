@@ -13,14 +13,25 @@ class DatingService {
     return {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'};
   }
 
-  /// People you might match with: [{ user_id, name, age, photo_url (blurred),
-  /// compatibility }]. Returns [] on any error.
-  static Future<List<Map<String, dynamic>>> fetchDiscovery() async {
+  /// People you might match with: [{ user_id, name, age, city, photo_url (blurred),
+  /// compatibility }]. Optional filters: [minAge]/[maxAge] (inclusive) and [city]
+  /// (coarse, case-insensitive). Returns [] on any error.
+  static Future<List<Map<String, dynamic>>> fetchDiscovery({
+    int? minAge,
+    int? maxAge,
+    String? city,
+  }) async {
     final headers = await _authHeaders();
     if (headers == null) return [];
     try {
+      final params = <String, String>{
+        if (minAge != null) 'min_age': '$minAge',
+        if (maxAge != null) 'max_age': '$maxAge',
+        if (city != null && city.trim().isNotEmpty) 'city': city.trim(),
+      };
       final res = await _client.get(
-        Uri.parse('${AppConstants.baseUrl}/api/v1/discovery'),
+        Uri.parse('${AppConstants.baseUrl}/api/v1/discovery')
+            .replace(queryParameters: params.isEmpty ? null : params),
         headers: headers,
       );
       if (res.statusCode == 200) {

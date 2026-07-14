@@ -13,6 +13,7 @@ class User {
   final String? gender;
   final String? seeking;
   final String? bio;
+  final String? city;
 
   const User({
     this.id,
@@ -26,6 +27,7 @@ class User {
     this.gender,
     this.seeking,
     this.bio,
+    this.city,
   });
 
   /// Create a [User] from the API response:
@@ -45,6 +47,7 @@ class User {
       gender: json['gender'] as String?,
       seeking: json['seeking'] as String?,
       bio: json['bio'] as String?,
+      city: json['city'] as String?,
     );
   }
 
@@ -71,6 +74,7 @@ class User {
     String? gender,
     String? seeking,
     String? bio,
+    String? city,
   }) {
     return User(
       id: id ?? this.id,
@@ -84,6 +88,7 @@ class User {
       gender: gender ?? this.gender,
       seeking: seeking ?? this.seeking,
       bio: bio ?? this.bio,
+      city: city ?? this.city,
     );
   }
 }

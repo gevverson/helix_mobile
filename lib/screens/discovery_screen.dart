@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../config/app_constants.dart';
 import '../services/dating_service.dart';
 import '../widgets/safety_menu.dart';
+import '../widgets/genetic_disclaimer.dart';
 
 /// Browse potential matches — one card at a time. Photos are blurred; a
 /// compatibility badge is shown up front. Liking someone who liked you = a match.
@@ -107,11 +108,18 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
                 style: TextStyle(color: AppConstants.textPrimary, fontSize: 18)),
           ],
         ),
-        content: Text(
-          compatible
-              ? 'You and ${match['name'] ?? 'they'} matched — and you\'re genetically compatible. Their photo is unlocked in Matches. 💚'
-              : 'You matched with ${match['name'] ?? 'them'}, but this pairing carries a genetic risk. See the advisory in Matches before going further.',
-          style: const TextStyle(color: AppConstants.textSecondary, height: 1.5),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              compatible
+                  ? 'You and ${match['name'] ?? 'they'} matched — and you\'re genetically compatible. Their photo is unlocked in Matches. 💚'
+                  : 'You matched with ${match['name'] ?? 'them'}, but this pairing carries a higher genetic risk. See the advisory in Matches before going further.',
+              style: const TextStyle(color: AppConstants.textSecondary, height: 1.5),
+            ),
+            if (!compatible) const GeneticDisclaimer(padding: EdgeInsets.only(top: 14)),
+          ],
         ),
         actions: [
           TextButton(

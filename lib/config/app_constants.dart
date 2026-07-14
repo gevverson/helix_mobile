@@ -18,6 +18,15 @@ class AppConstants {
     defaultValue: 'http://10.0.2.2:8000',
   );
 
+  /// Standing disclaimer shown wherever a genetic-compatibility result appears.
+  /// Frames Helix as general genetic education, not medical diagnosis/advice
+  /// (see backend COMPLIANCE.md §8 / R8). Keep this in sync with the backend's
+  /// GENETIC_INFO_DISCLAIMER.
+  static const String geneticDisclaimer =
+      'Educational information about inheritance patterns — not a medical '
+      'diagnosis or advice. For your specific situation, speak with a clinician '
+      'or genetic counsellor.';
+
   /// Google OAuth server client ID — injected at compile time from flavor JSON.
   static const String googleClientId = String.fromEnvironment(
     'GOOGLE_CLIENT_ID',

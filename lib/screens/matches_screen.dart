@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../config/app_constants.dart';
 import '../services/dating_service.dart';
 import '../widgets/safety_menu.dart';
+import '../widgets/genetic_disclaimer.dart';
 import 'chat_screen.dart';
 
 /// Your matches. Photos are clear when you're genetically compatible, and stay
@@ -224,6 +225,7 @@ class _MatchesScreenState extends State<MatchesScreen>
                       ],
                     ),
                   ),
+                  const GeneticDisclaimer(padding: EdgeInsets.only(top: 8)),
                 ],
                 const SizedBox(height: 12),
                 Row(

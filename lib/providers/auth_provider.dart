@@ -76,6 +76,7 @@ class AuthProvider extends ChangeNotifier {
     required bool consentHealthData,
     required bool consentCrossBorder,
     required bool isOver18,
+    String? genotype,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -89,6 +90,7 @@ class AuthProvider extends ChangeNotifier {
         consentHealthData: consentHealthData,
         consentCrossBorder: consentCrossBorder,
         isOver18: isOver18,
+        genotype: genotype,
       );
       if (!success) {
         _errorMessage = 'Registration failed. Email may already be in use.';

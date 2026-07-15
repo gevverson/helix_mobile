@@ -25,12 +25,16 @@ class _RegisterScreenState extends State<RegisterScreen>
   late AnimationController _animController;
   late Animation<double> _fadeIn;
 
+  static const _genotypes = ['AA', 'AS', 'SS', 'AC', 'SC'];
+
   double _passwordStrength = 0;
   bool _consentHealth = false;
   bool _consentCrossBorder = false;
   bool _isOver18 = false;
+  String? _genotype;
 
   bool get _allConsented => _consentHealth && _consentCrossBorder && _isOver18;
+  bool get _canSubmit => _allConsented && _genotype != null;
 
   @override
   void initState() {
@@ -104,6 +108,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       consentHealthData: _consentHealth,
       consentCrossBorder: _consentCrossBorder,
       isOver18: _isOver18,
+      genotype: _genotype,
     );
 
     if (success && mounted) {
@@ -374,6 +379,57 @@ class _RegisterScreenState extends State<RegisterScreen>
                             ),
                             const SizedBox(height: 24),
 
+                            // ── Genotype (needed for compatibility matching) ──
+                            const Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'Your genotype',
+                                style: TextStyle(
+                                  color: AppConstants.textPrimary,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            const Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'Used to calculate genetic compatibility. You can change it later in your profile.',
+                                style: TextStyle(color: AppConstants.textMuted, fontSize: 12, height: 1.35),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: _genotypes.map((g) {
+                                final selected = g == _genotype;
+                                return GestureDetector(
+                                  onTap: () => setState(() => _genotype = g),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                                    decoration: BoxDecoration(
+                                      gradient: selected ? AppConstants.purpleGradient : null,
+                                      color: selected ? null : AppConstants.bgCard,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: selected ? Colors.transparent : AppConstants.borderColor,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      g,
+                                      style: TextStyle(
+                                        color: selected ? AppConstants.bgPrimary : AppConstants.textPrimary,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                            const SizedBox(height: 24),
+
                             // ── Consent (explicit, granular — no pre-ticking) ──
                             _buildConsentTile(
                               value: _consentHealth,
@@ -446,19 +502,21 @@ class _RegisterScreenState extends State<RegisterScreen>
                               const SizedBox(height: 16),
                             ],
 
-                            // Register button — greyed until all consents ticked.
+                            // Register button — greyed until genotype + all consents set.
                             HelixButton(
                               label: 'CREATE ACCOUNT',
                               icon: Icons.person_add,
                               isLoading: authProvider.isLoading,
-                              onPressed: _allConsented ? _handleRegister : null,
+                              onPressed: _canSubmit ? _handleRegister : null,
                               gradient: AppConstants.purpleGradient,
                             ),
-                            if (!_allConsented) ...[
+                            if (!_canSubmit) ...[
                               const SizedBox(height: 8),
-                              const Text(
-                                'Tick all three consents above to create your account.',
-                                style: TextStyle(color: AppConstants.textMuted, fontSize: 12),
+                              Text(
+                                _genotype == null
+                                    ? 'Select your genotype above to continue.'
+                                    : 'Tick all three consents above to create your account.',
+                                style: const TextStyle(color: AppConstants.textMuted, fontSize: 12),
                               ),
                             ],
                           ],

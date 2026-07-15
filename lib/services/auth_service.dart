@@ -186,6 +186,7 @@ class AuthService {
     required bool consentHealthData,
     required bool consentCrossBorder,
     required bool isOver18,
+    String? genotype,
   }) async {
     final url = Uri.parse('${AppConstants.baseUrl}/api/v1/users');
 
@@ -200,7 +201,9 @@ class AuthService {
           'consent_health_data': consentHealthData,
           'consent_cross_border': consentCrossBorder,
           'is_over_18': isOver18,
-          'bio_profile': {},
+          'bio_profile': {
+            if (genotype != null && genotype.isNotEmpty) 'genotype': genotype,
+          },
         }),
       ).timeout(const Duration(seconds: 10));
 

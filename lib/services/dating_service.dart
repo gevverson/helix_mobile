@@ -127,10 +127,11 @@ class DatingService {
 
   /// The message thread for a match: [{ id, match_id, sender_id, body, read,
   /// created_at }] oldest-first. Fetching also marks incoming messages read.
-  /// Returns [] on error.
-  static Future<List<Map<String, dynamic>>> fetchMessages(String matchId) async {
+  /// Returns `null` on error — distinct from an empty thread, so a failed poll
+  /// never wipes the conversation off the screen.
+  static Future<List<Map<String, dynamic>>?> fetchMessages(String matchId) async {
     final headers = await _authHeaders();
-    if (headers == null) return [];
+    if (headers == null) return null;
     try {
       final res = await _client.get(
         Uri.parse('${AppConstants.baseUrl}/api/v1/matches/$matchId/messages'),
@@ -139,9 +140,9 @@ class DatingService {
       if (res.statusCode == 200) {
         return (jsonDecode(res.body) as List).cast<Map<String, dynamic>>();
       }
-      return [];
+      return null;
     } catch (_) {
-      return [];
+      return null;
     }
   }
 

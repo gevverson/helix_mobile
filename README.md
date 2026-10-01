@@ -115,7 +115,7 @@ flutter analyze
 `ApiClient.instance` is an `InterceptedClient` singleton used by both `AuthService` and `ProfileService`. All cross-cutting concerns live in one place:
 
 - **`HelixApiInterceptor`** — checks connectivity before every request; logs request/response in debug mode; fires `SessionManager.onUnauthorized()` on 401
-- **`HelixRetryPolicy`** — retries on 5xx up to 3 times; never retries on `NetworkOfflineException` or `SocketException`
+- **`IdempotentRetryClient`** (`api_client.dart`) — retries GET/HEAD/PUT/DELETE on 5xx or transient errors, up to 3 times with backoff; never retries POST/PATCH (a retry would duplicate a message, like or sign-up), `SocketException` or `NetworkOfflineException`
 
 ### Session management
 

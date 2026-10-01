@@ -46,25 +46,3 @@ class HelixApiInterceptor extends InterceptorContract {
     return response;
   }
 }
-
-class HelixRetryPolicy extends RetryPolicy {
-  @override
-  int get maxRetryAttempts => 3;
-
-  @override
-  Future<bool> shouldAttemptRetryOnResponse(BaseResponse response) async {
-    return response.statusCode >= 500;
-  }
-
-  @override
-  Future<bool> shouldAttemptRetryOnException(
-    Exception reason,
-    BaseRequest request,
-  ) async {
-    // Never retry on connectivity failures — the error is immediate and
-    // the user needs to see the "no connection" message right away
-    if (reason is SocketException) return false;
-    if (reason is NetworkOfflineException) return false;
-    return true;
-  }
-}

@@ -105,6 +105,45 @@ void main() {
   // ── Register Screen ──────────────────────────────────────────────────────
 
   group('Register screen', () {
+    // CREATE ACCOUNT is disabled until a genotype is picked and all three
+    // consents are ticked — do that before testing form validation.
+    Future<void> unlockSubmit(WidgetTester tester) async {
+      final scrollable = find.byType(Scrollable).first;
+      await tester.scrollUntilVisible(find.text('AA'), 100, scrollable: scrollable);
+      await tester.tap(find.text('AA'));
+      await tester.pump();
+      for (var i = 0; i < 3; i++) {
+        final box = find.byType(Checkbox).at(i);
+        await tester.scrollUntilVisible(box, 100, scrollable: scrollable);
+        await tester.tap(box);
+        await tester.pump();
+      }
+    }
+
+    Finder submitButton() => find.ancestor(
+          of: find.text('CREATE ACCOUNT'),
+          matching: find.byWidgetPredicate((w) => w is ButtonStyleButton),
+        );
+
+    testWidgets('submit is disabled until genotype and consents are set', (tester) async {
+      await tester.pumpWidget(_wrap(const RegisterScreen()));
+      await tester.pump();
+
+      await tester.scrollUntilVisible(
+        find.text('CREATE ACCOUNT'),
+        100,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(tester.widget<ButtonStyleButton>(submitButton()).onPressed, isNull);
+
+      await unlockSubmit(tester);
+      await tester.scrollUntilVisible(
+        find.text('CREATE ACCOUNT'),
+        100,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(tester.widget<ButtonStyleButton>(submitButton()).onPressed, isNotNull);
+    });
     testWidgets('renders all form fields', (tester) async {
       await tester.pumpWidget(_wrap(const RegisterScreen()));
       await tester.pump();
@@ -119,6 +158,7 @@ void main() {
     testWidgets('shows validation errors on empty submit', (tester) async {
       await tester.pumpWidget(_wrap(const RegisterScreen()));
       await tester.pump();
+      await unlockSubmit(tester);
 
       await tester.scrollUntilVisible(
         find.text('CREATE ACCOUNT'),
@@ -147,6 +187,7 @@ void main() {
       );
       await tester.enterText(
           find.widgetWithText(TextFormField, 'Confirm Password'), 'DifferentPass1');
+      await unlockSubmit(tester);
 
       await tester.scrollUntilVisible(
         find.text('CREATE ACCOUNT'),

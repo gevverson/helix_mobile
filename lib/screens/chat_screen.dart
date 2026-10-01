@@ -28,6 +28,8 @@ class _ChatScreenState extends State<ChatScreen> {
   final _scroll = ScrollController();
   List<Map<String, dynamic>> _messages = [];
   bool _loading = true;
+  bool _loadFailed = false; // first load failed and we have nothing to show
+  bool _fetching = false;   // a poll is in flight (cold starts can exceed 4s)
   bool _sending = false;
   Timer? _poll;
 
@@ -47,12 +49,21 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _load({bool initial = false}) async {
+    if (_fetching) return;
+    _fetching = true;
     final list = await DatingService.fetchMessages(widget.matchId);
+    _fetching = false;
     if (!mounted) return;
+    if (list == null) {
+      // Keep what's on screen; the next poll will try again.
+      if (_loading) setState(() { _loading = false; _loadFailed = true; });
+      return;
+    }
     final grew = list.length != _messages.length;
     setState(() {
       _messages = list;
       _loading = false;
+      _loadFailed = false;
     });
     if (initial || grew) _scrollToBottom();
   }
@@ -116,7 +127,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 child: _loading
                     ? const Center(child: CircularProgressIndicator(color: AppConstants.accentCyan))
                     : _messages.isEmpty
-                        ? _empty()
+                        ? (_loadFailed ? _error() : _empty())
                         : ListView.builder(
                             controller: _scroll,
                             padding: const EdgeInsets.all(16),
@@ -128,6 +139,23 @@ class _ChatScreenState extends State<ChatScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _error() {
+    return const Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.cloud_off, color: AppConstants.textMuted, size: 52),
+          SizedBox(height: 14),
+          Text("Couldn't load messages",
+              style: TextStyle(color: AppConstants.textPrimary, fontSize: 17, fontWeight: FontWeight.w700)),
+          SizedBox(height: 6),
+          Text('Check your connection — retrying automatically.',
+              style: TextStyle(color: AppConstants.textSecondary)),
+        ],
       ),
     );
   }

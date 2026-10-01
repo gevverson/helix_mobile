@@ -4,6 +4,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_constants.dart';
+import 'token_store.dart';
 
 /// Handles JWT session lifecycle — detects expiry and attempts silent recovery.
 ///
@@ -35,8 +36,8 @@ class SessionManager {
   /// Called by [HelixApiInterceptor] on a 401 for a request sent with [rejectedToken].
   static Future<void> onUnauthorized(String rejectedToken) async {
     if (_isRefreshing) return;
+    if (await TokenStore.read() != rejectedToken) return;
     final prefs = await SharedPreferences.getInstance();
-    if (prefs.getString(AppConstants.tokenKey) != rejectedToken) return;
 
     _isRefreshing = true;
     try {
@@ -58,8 +59,8 @@ class SessionManager {
 
     // Could not refresh — clear the stale session (unless it changed meanwhile)
     // and signal the UI.
-    if (prefs.getString(AppConstants.tokenKey) != rejectedToken) return;
-    await prefs.remove(AppConstants.tokenKey);
+    if (await TokenStore.read() != rejectedToken) return;
+    await TokenStore.clear();
     await prefs.remove(AppConstants.authMethodKey);
     sessionExpired.value = true;
   }
@@ -81,9 +82,8 @@ class SessionManager {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final token = data['access_token'] as String;
-        final prefs = await SharedPreferences.getInstance();
-        if (prefs.getString(AppConstants.tokenKey) != rejectedToken) return false;
-        await prefs.setString(AppConstants.tokenKey, token);
+        if (await TokenStore.read() != rejectedToken) return false;
+        await TokenStore.write(token);
         if (kDebugMode) debugPrint('SessionManager: token silently refreshed');
         return true;
       }

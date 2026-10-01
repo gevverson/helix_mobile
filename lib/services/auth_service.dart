@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_constants.dart';
 import 'api_client.dart';
 import 'push_service.dart';
+import 'token_store.dart';
 
 /// Outcome of a Google sign-in attempt.
 class GoogleSignInResult {
@@ -31,7 +32,7 @@ class AuthService {
 
   /// Authenticate with email + password. Returns `true` on success.
   ///
-  /// On success the JWT access token is persisted to SharedPreferences
+  /// On success the JWT access token is persisted to [TokenStore] (secure storage)
   /// so that subsequent authenticated requests can include it.
   static Future<bool> login(String email, String password) async {
     final url = Uri.parse('${AppConstants.baseUrl}/api/v1/auth/token');
@@ -50,8 +51,8 @@ class AuthService {
         final data = jsonDecode(response.body);
         final token = data['access_token'] as String;
 
+        await TokenStore.write(token);
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(AppConstants.tokenKey, token);
         await prefs.setString(AppConstants.authMethodKey, 'password');
         return true;
       } else {
@@ -100,8 +101,8 @@ class AuthService {
         final data = jsonDecode(response.body);
         final token = data['access_token'] as String;
 
+        await TokenStore.write(token);
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(AppConstants.tokenKey, token);
         await prefs.setString(AppConstants.authMethodKey, 'google');
         return GoogleSignInResult(needsConsent: data['needs_consent'] == true);
       }
@@ -223,8 +224,8 @@ class AuthService {
   static Future<void> logout({bool unregisterDevice = true}) async {
     // Needs the token that's about to be cleared, so it runs first.
     if (unregisterDevice) await PushService.unregister();
+    await TokenStore.clear();
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(AppConstants.tokenKey);
     await prefs.remove(AppConstants.authMethodKey);
     // Sign out of Google too, otherwise SessionManager's signInSilently() could
     // quietly sign the next person in as this account (or re-create a deleted one).
@@ -234,10 +235,7 @@ class AuthService {
   }
 
   /// Retrieve the stored auth token, if any.
-  static Future<String?> getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(AppConstants.tokenKey);
-  }
+  static Future<String?> getToken() => TokenStore.read();
 
   /// Whether a token is currently stored.
   static Future<bool> isLoggedIn() async {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,6 +15,7 @@ import 'package:helix_mobile/screens/login_screen.dart';
 import 'package:helix_mobile/screens/register_screen.dart';
 import 'package:helix_mobile/screens/match_screen.dart';
 import 'package:helix_mobile/screens/scan_screen.dart';
+import 'package:helix_mobile/services/token_store.dart';
 
 // Suppress image-resource HTTP errors that occur in tests because no real
 // backend or CDN is reachable.
@@ -41,6 +43,8 @@ Widget _wrap(Widget child) {
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
+    FlutterSecureStorage.setMockInitialValues({});
+    TokenStore.resetForTest();
   });
 
   // ── Splash Screen ────────────────────────────────────────────────────────

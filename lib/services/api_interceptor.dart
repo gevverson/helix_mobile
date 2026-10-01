@@ -34,9 +34,13 @@ class HelixApiInterceptor extends InterceptorContract {
     }
 
     // Detect token expiry — fire async so the 401 response still propagates
-    // to the calling service method immediately
+    // to the calling service method immediately. Only authenticated requests
+    // count: a 401 from /auth/token just means a wrong password.
     if (response.statusCode == 401) {
-      SessionManager.onUnauthorized(); // intentionally unawaited
+      final auth = response.request?.headers[HttpHeaders.authorizationHeader];
+      if (auth != null && auth.startsWith('Bearer ')) {
+        SessionManager.onUnauthorized(auth.substring(7)); // intentionally unawaited
+      }
     }
 
     return response;

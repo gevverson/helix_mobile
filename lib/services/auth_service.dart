@@ -52,6 +52,7 @@ class AuthService {
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(AppConstants.tokenKey, token);
+        await prefs.setString(AppConstants.authMethodKey, 'password');
         return true;
       } else {
         return false;
@@ -101,6 +102,7 @@ class AuthService {
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(AppConstants.tokenKey, token);
+        await prefs.setString(AppConstants.authMethodKey, 'google');
         return GoogleSignInResult(needsConsent: data['needs_consent'] == true);
       }
 
@@ -213,12 +215,22 @@ class AuthService {
     }
   }
 
-  /// Remove the stored auth token (log out).
-  static Future<void> logout() async {
-    // Stop pushes to this device first — needs the token that's about to be cleared.
-    await PushService.unregister();
+  /// Log out: stop pushes to this device, then clear the local session.
+  ///
+  /// Pass `unregisterDevice: false` after account deletion — the backend has
+  /// already erased the device tokens, and calling it with the now-dead token
+  /// would only produce a 401.
+  static Future<void> logout({bool unregisterDevice = true}) async {
+    // Needs the token that's about to be cleared, so it runs first.
+    if (unregisterDevice) await PushService.unregister();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(AppConstants.tokenKey);
+    await prefs.remove(AppConstants.authMethodKey);
+    // Sign out of Google too, otherwise SessionManager's signInSilently() could
+    // quietly sign the next person in as this account (or re-create a deleted one).
+    try {
+      await _googleSignIn.signOut();
+    } catch (_) {}
   }
 
   /// Retrieve the stored auth token, if any.

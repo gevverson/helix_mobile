@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
@@ -10,8 +11,12 @@ import '../widgets/helix_text_field.dart';
 
 /// Two-step password reset screen.
 ///
-/// Step 1 — enter email → backend generates a 6-digit code.
+/// Step 1 — enter email → backend emails a 6-digit code.
 /// Step 2 — enter the code + new password → backend verifies and resets.
+///
+/// The code only ever arrives by email. A local backend run with
+/// PASSWORD_RESET_EXPOSE_CODE=true also returns it as `demo_code`, which debug
+/// builds display for testing; release builds never do.
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
 
@@ -69,21 +74,26 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
     });
 
     try {
-      final response = await http.post(
-        Uri.parse('${AppConstants.baseUrl}/api/v1/auth/forgot-password'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': _emailController.text.trim()}),
-      );
+      final response = await http
+          .post(
+            Uri.parse('${AppConstants.baseUrl}/api/v1/auth/forgot-password'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'email': _emailController.text.trim()}),
+          )
+          .timeout(const Duration(seconds: 45)); // Render cold start
 
       final body = jsonDecode(response.body) as Map<String, dynamic>;
-      if (mounted) {
-        setState(() {
-          _codeSent = true;
-          _demoCode = body['demo_code'] as String?;
-          _errorMessage = null;
-        });
-        _animController.forward(from: 0);
+      if (!mounted) return;
+      if (response.statusCode != 200) {
+        setState(() => _errorMessage = _errorFrom(response.statusCode, body));
+        return;
       }
+      setState(() {
+        _codeSent = true;
+        _demoCode = kDebugMode ? body['demo_code'] as String? : null;
+        _errorMessage = null;
+      });
+      _animController.forward(from: 0);
     } catch (_) {
       if (mounted) {
         setState(() => _errorMessage = 'Network error. Please try again.');
@@ -102,15 +112,17 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
     });
 
     try {
-      final response = await http.post(
-        Uri.parse('${AppConstants.baseUrl}/api/v1/auth/reset-password'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': _emailController.text.trim(),
-          'code': _codeController.text.trim(),
-          'new_password': _passwordController.text,
-        }),
-      );
+      final response = await http
+          .post(
+            Uri.parse('${AppConstants.baseUrl}/api/v1/auth/reset-password'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'email': _emailController.text.trim(),
+              'code': _codeController.text.trim(),
+              'new_password': _passwordController.text,
+            }),
+          )
+          .timeout(const Duration(seconds: 45));
 
       final body = jsonDecode(response.body) as Map<String, dynamic>;
 
@@ -120,7 +132,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
         }
       } else {
         if (mounted) {
-          setState(() => _errorMessage = body['detail'] as String? ?? 'Reset failed.');
+          setState(() => _errorMessage = _errorFrom(response.statusCode, body));
         }
       }
     } catch (_) {
@@ -130,6 +142,19 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  /// User-facing message for a failed request. `detail` is a string for
+  /// HTTPExceptions but a list for 422 validation errors.
+  String _errorFrom(int status, Map<String, dynamic> body) {
+    if (status == 429) return 'Too many attempts. Please wait a minute and try again.';
+    final detail = body['detail'];
+    if (detail is String) return detail;
+    if (detail is List && detail.isNotEmpty) {
+      final msg = (detail.first as Map<String, dynamic>?)?['msg'];
+      if (msg is String) return msg.replaceFirst('Value error, ', '');
+    }
+    return 'Something went wrong. Please try again.';
   }
 
   @override
@@ -191,8 +216,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                   const SizedBox(height: 8),
                   Text(
                     _codeSent
-                        ? 'Enter the 6-digit code and your new password.'
-                        : 'Enter your email and we\'ll generate a reset code.',
+                        ? 'If that email has an account, we\'ve sent it a 6-digit code. '
+                            'Enter it below with your new password.'
+                        : 'Enter your email and we\'ll send you a reset code.',
                     style: const TextStyle(
                       color: AppConstants.textSecondary,
                       fontSize: 14,
@@ -253,7 +279,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                       ),
                     ),
 
-                    // ── Demo code banner (replaces email in demo) ──
+                    // ── Demo code banner (debug builds + local backend only) ──
                     if (_codeSent && _demoCode != null) ...[
                       const SizedBox(height: 16),
                       Container(
@@ -287,7 +313,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                                   ),
                                   const SizedBox(height: 4),
                                   const Text(
-                                    'In production this code would arrive by email. Your code:',
+                                    'Local backend with PASSWORD_RESET_EXPOSE_CODE. Your code:',
                                     style: TextStyle(
                                       color: AppConstants.textSecondary,
                                       fontSize: 12,

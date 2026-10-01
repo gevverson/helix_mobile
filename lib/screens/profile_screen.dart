@@ -557,7 +557,8 @@ class _ProfileScreenState extends State<ProfileScreen>
 
     if (ok) {
       final router = GoRouter.of(context);
-      await context.read<AuthProvider>().logout();
+      // The account (and its device tokens) is already gone server-side.
+      await context.read<AuthProvider>().logout(unregisterDevice: false);
       router.go(AppRouter.login);
     } else {
       setState(() => _isDeleting = false);

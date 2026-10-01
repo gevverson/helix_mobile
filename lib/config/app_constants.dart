@@ -44,6 +44,9 @@ class AppConstants {
 
   // SharedPreferences keys
   static const String tokenKey = 'auth_token';
+  /// How the current session was created: 'google' or 'password'. Only Google
+  /// sessions may be silently renewed — see SessionManager.
+  static const String authMethodKey = 'auth_method';
 
   // ── Color Palette ──────────────────────────────────────────────
   static const Color bgPrimary = Color(0xFF0D1117);

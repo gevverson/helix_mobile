@@ -62,18 +62,18 @@ class ScanProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final ok = await ProfileService.updateProfile(
-        _lastScan!.genotype ?? 'Unknown',
-        _lastScan!.bloodGroup ?? 'Unknown',
+      final error = await ProfileService.updateProfile(
+        _lastScan!.genotype,
+        _lastScan!.bloodGroup,
       );
-      if (ok) {
+      if (error == null) {
         _lastScan = null;
         _cachedBytes = null;
         _cachedFileName = null;
       } else {
-        _errorMessage = 'Failed to save. Please try again.';
+        _errorMessage = error;
       }
-      return ok;
+      return error == null;
     } catch (_) {
       _errorMessage = 'Failed to save. Please try again.';
       return false;

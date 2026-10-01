@@ -42,13 +42,13 @@ class ProfileProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final ok = await ProfileService.updateProfile(genotype, bloodGroup);
-      if (ok) {
+      final error = await ProfileService.updateProfile(genotype, bloodGroup);
+      if (error == null) {
         await loadProfile(force: true);
       } else {
-        _errorMessage = 'Failed to save profile. Please try again.';
+        _errorMessage = error;
       }
-      return ok;
+      return error == null;
     } catch (_) {
       _errorMessage = 'Failed to save profile. Please try again.';
       return false;

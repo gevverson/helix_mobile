@@ -112,10 +112,12 @@ class _ScanScreenState extends State<ScanScreen>
 
     setState(() => _isSaving = true);
 
-    final success = await ProfileService.updateProfile(
-      _lastScan!.genotype ?? 'Unknown',
-      _lastScan!.bloodGroup ?? 'Unknown',
+    final error = await ProfileService.updateProfile(
+      _lastScan!.genotype,
+      _lastScan!.bloodGroup,
     );
+    final success = error == null;
+    if (!mounted) return;
 
     setState(() {
       _isSaving = false;
@@ -123,7 +125,7 @@ class _ScanScreenState extends State<ScanScreen>
         _lastScan = null;
         _errorMessage = null;
       } else {
-        _errorMessage = 'Failed to save. Please try again.';
+        _errorMessage = error;
       }
     });
 

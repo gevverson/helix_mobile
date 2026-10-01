@@ -4,8 +4,9 @@ import '../services/dating_service.dart';
 import '../widgets/safety_menu.dart';
 import '../widgets/genetic_disclaimer.dart';
 
-/// Browse potential matches — one card at a time. Photos are blurred; a
-/// compatibility badge is shown up front. Liking someone who liked you = a match.
+/// Browse potential matches — one card at a time. Photos are blurred and no
+/// compatibility is shown: it would reveal the other person's genotype (DPIA R9).
+/// Compatibility is revealed only on a mutual match. Liking someone who liked you = a match.
 class DiscoveryScreen extends StatefulWidget {
   const DiscoveryScreen({super.key});
 
@@ -279,8 +280,6 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _compatBadge(c['compatibility'] as String?),
-                const SizedBox(height: 12),
                 Text(
                   age != null ? '$name, $age' : name,
                   style: const TextStyle(
@@ -301,7 +300,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
                   ),
                 ],
                 const SizedBox(height: 4),
-                const Text('Photo unlocks when you match & are compatible',
+                const Text('Compatibility & photo revealed when you match',
                     style: TextStyle(color: Colors.white70, fontSize: 12)),
               ],
             ),
@@ -323,49 +322,6 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
             fontWeight: FontWeight.w800,
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _compatBadge(String? status) {
-    late Color color;
-    late String label;
-    late IconData icon;
-    switch (status) {
-      case 'safe':
-        color = AppConstants.successColor;
-        label = 'Compatible';
-        icon = Icons.check_circle;
-        break;
-      case 'caution':
-        color = AppConstants.warningColor;
-        label = 'Caution';
-        icon = Icons.info;
-        break;
-      case 'danger':
-        color = AppConstants.errorColor;
-        label = 'High genetic risk';
-        icon = Icons.warning_amber_rounded;
-        break;
-      default:
-        color = AppConstants.textMuted;
-        label = 'Compatibility unknown';
-        icon = Icons.help_outline;
-    }
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: Colors.white, size: 15),
-          const SizedBox(width: 6),
-          Text(label,
-              style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w700)),
-        ],
       ),
     );
   }

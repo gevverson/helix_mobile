@@ -105,9 +105,9 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  /// Clear auth token and reset state.
-  Future<void> logout() async {
-    await AuthService.logout();
+  /// Clear auth token and reset state. See [AuthService.logout].
+  Future<void> logout({bool unregisterDevice = true}) async {
+    await AuthService.logout(unregisterDevice: unregisterDevice);
     _errorMessage = null;
     notifyListeners();
   }

@@ -25,6 +25,9 @@ class _MainShellState extends State<MainShell> {
   void initState() {
     super.initState();
     _pageController = PageController();
+    // A fresh session: drop any expiry flagged while no shell was listening,
+    // otherwise the notifier stays `true` and never fires again.
+    SessionManager.sessionExpired.value = false;
     SessionManager.sessionExpired.addListener(_onSessionExpired);
     // Register this device for push now that the user is authenticated.
     PushService.init();

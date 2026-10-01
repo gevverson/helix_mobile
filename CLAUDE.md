@@ -30,7 +30,8 @@ Config is **compile-time only** via `--dart-define-from-file=flavors/{dev,stagin
 - `lib/config/` — `app_constants.dart` (env values, colours/gradients, disclaimer text, prefs keys), `app_theme.dart`.
 - `lib/services/` — static-method service classes (`AuthService`, `ProfileService`, `DatingService`,
   `PushService`) on top of `ApiClient.instance` (http_interceptor). `api_interceptor.dart` does the
-  connectivity check, headers, 401 → `SessionManager`, and the retry policy.
+  connectivity check, headers and 401 → `SessionManager`. Retries live in `IdempotentRetryClient`
+  (`api_client.dart`): GET/HEAD/PUT/DELETE only — **never retry POST/PATCH** (duplicates messages, likes, sign-ups).
 - `lib/providers/` — `ChangeNotifier`s. Only `AuthProvider` is actually used; `Scan/Match/ProfileProvider` are dead.
 - `lib/routes/app_router.dart` — go_router; guard only checks a token exists. `MainShell` = PageView with
   4 tabs (Discovery, Matches, Scan, Profile). Chat and Blocked Users are pushed with `Navigator.push`.
@@ -40,10 +41,15 @@ Config is **compile-time only** via `--dart-define-from-file=flavors/{dev,stagin
 
 ## Auth & session
 
-- JWT (30 min, no refresh token) stored in SharedPreferences key `auth_token`.
-- On 401 the interceptor calls `SessionManager.onUnauthorized()`, which tries Google `signInSilently()` +
-  `POST /auth/google`; on failure it clears the token and flips the `sessionExpired` notifier that `MainShell` listens to.
-- Each service builds its own `Authorization: Bearer` header from prefs.
+- JWT (30 min, no refresh token) lives in `TokenStore` (flutter_secure_storage, in-memory cache). Never put
+  tokens in SharedPreferences; `TokenStore` migrates a legacy prefs token on first read.
+- `auth_method` pref (`'google'` / `'password'`) records how the session started.
+- On a 401 for a request that carried a Bearer token, the interceptor calls
+  `SessionManager.onUnauthorized(token)`. It ignores stale 401s (token no longer stored), silently renews
+  **only Google sessions** (`signInSilently` + `POST /auth/google`), and otherwise clears the session and
+  flips `sessionExpired` (MainShell resets it on mount and navigates to login).
+- Logout calls `GoogleSignIn.signOut()`. After account deletion use `logout(unregisterDevice: false)` —
+  the token is dead and the backend already erased device tokens.
 
 ## Firebase / push — dependency gotcha
 
@@ -66,6 +72,10 @@ there is no `firebase_options.dart` / iOS plist, so iOS won't start.
   `GoRouter.of(context)` before an async logout.
 - Genetic results are **educational, not diagnostic** — show `GeneticDisclaimer` wherever a compatibility
   result appears. No GPS: city is user-typed.
+- **Never show anything derived from another user's genotype before a mutual match** (no compatibility in
+  Discovery — it leaks health data; backend DPIA R9).
+- `ProfileService.updateProfile` returns `null` on success or a user-facing error (e.g. the backend's
+  30-day genotype-change cooldown) — show it.
 - Commits: conventional (`feat(auth): ...`, `fix: ...`, `docs: ...`), one PR per `feat/<name>` branch.
 
 ## Cross-repo contract
@@ -75,20 +85,14 @@ All calls go to `{API_BASE_URL}/api/v1/...`: `auth/token` (form-encoded `usernam
 `users/me/profile`, `users/me/dating-profile`, `users/me/photos`, `users/me/devices`, `scan-report`,
 `check-match`, `discovery`, `likes/{id}`, `matches`, `matches/{id}/messages`, `blocks`, `reports/{id}`.
 - Enum values must match backend `Literal`s exactly: genotype `AA|AS|SS|AC|SC`, blood group `A+ … AB-`,
-  rhesus `POS|NEG`, gender `male|female|other`, seeking `male|female|everyone`. Send `null`/omit — never `''` or `'Unknown'` (→ 422).
+  rhesus `POS|NEG`, gender `male|female|other`, seeking `male|female|everyone`. Omit unset fields — never send `''` or `'Unknown'` (→ 422).
 - Errors: read `detail`; it is a string for HTTPException but a **list** for 422 validation errors.
 - New endpoint? Merge + deploy the backend PR first, then the mobile PR.
 
-## Known issues (as of 2026-10-01 review)
+## Known issues (open, as of 2026-10-01)
 
-- Forgot-password screen displays the backend's `demo_code` (paired with a critical backend bug).
-- Any 401 (incl. wrong password on login, or unregistering a device after account deletion) triggers silent
-  Google re-auth; logout never calls `GoogleSignIn.signOut()` → can sign in as / re-create a Google account.
-  `sessionExpired` is never reset to `false`.
-- Profile/scan save sends `''`/`'Unknown'` for unset fields → 422, and the Profile sheet shows no error.
-- Retry policy retries non-idempotent POSTs (messages, likes, register) and multipart uploads (always fails on retry).
-- Chat poll replaces the list with `[]` on any error; services swallow errors so screens show empty states instead of errors.
-- JWT in plaintext SharedPreferences (move to flutter_secure_storage).
-- 2 stale widget tests fail (register button is disabled until consents + genotype are set).
+- Most services still swallow errors (`catch (_) => null/[]/false`), so Discovery/Matches/Blocked show empty states instead of errors; a failed like silently advances the card.
+- No consent gate in the router (only the splash checks `needsConsent`; the backend still enforces it).
+- iOS won't start: no `firebase_options.dart` / `GoogleService-Info.plist`. `Platform.isAndroid` in `push_service.dart` breaks web.
 - Dead code: `ScanProvider`, `MatchProvider`, `ProfileProvider`, `MatchScreen`, `DashboardScreen`, `StatCard`;
-  stray `android/app/google-services .json` (with a space).
+  stray `android/app/google-services .json` (with a space); spoofed browser User-Agent in the interceptor.

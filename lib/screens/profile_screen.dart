@@ -171,25 +171,25 @@ class _ProfileScreenState extends State<ProfileScreen>
                         : () async {
                             Navigator.pop(ctx);
                             setState(() => _isSaving = true);
-                            final ok = await ProfileService.updateProfile(
-                              selectedGenotype ?? _user?.genotype ?? '',
-                              selectedBloodGroup ?? _user?.bloodGroup ?? '',
+                            final error = await ProfileService.updateProfile(
+                              selectedGenotype,
+                              selectedBloodGroup,
                               rhesus: selectedRhesus,
                             );
-                            if (ok && mounted) {
+                            if (error == null && mounted) {
                               await _loadProfile();
                             }
                             if (!mounted) return;
                             setState(() => _isSaving = false);
-                            if (ok) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Profile updated successfully'),
-                                  behavior: SnackBarBehavior.floating,
-                                  backgroundColor: AppConstants.successColor,
-                                ),
-                              );
-                            }
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(error ?? 'Profile updated successfully'),
+                                behavior: SnackBarBehavior.floating,
+                                backgroundColor: error == null
+                                    ? AppConstants.successColor
+                                    : AppConstants.errorColor,
+                              ),
+                            );
                           },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.transparent,

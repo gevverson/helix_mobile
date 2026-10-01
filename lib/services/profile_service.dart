@@ -179,21 +179,29 @@ class ProfileService {
     }
   }
 
-  /// Save genotype, blood group, and optionally rhesus factor to the user's profile.
-  static Future<bool> updateProfile(
-    String genotype,
-    String bloodGroup, {
+  /// Save genotype, blood group and/or rhesus factor to the user's profile.
+  ///
+  /// Only the values that are set are sent — the backend accepts exact values
+  /// only, so an empty or `'Unknown'` field would fail the whole save with a 422.
+  /// Returns `null` on success, otherwise a user-facing error message (e.g. the
+  /// backend's 30-day genotype-change cooldown).
+  static Future<String?> updateProfile(
+    String? genotype,
+    String? bloodGroup, {
     String? rhesus,
   }) async {
+    const genericError = 'Failed to save. Please try again.';
     final url = Uri.parse('${AppConstants.baseUrl}/api/v1/users/me/profile');
     final token = await AuthService.getToken();
-    if (token == null) return false;
+    if (token == null) return genericError;
 
+    bool isSet(String? v) => v != null && v.isNotEmpty && v != 'Unknown';
     final body = <String, dynamic>{
-      'genotype': genotype,
-      'blood_group': bloodGroup,
+      if (isSet(genotype)) 'genotype': genotype,
+      if (isSet(bloodGroup)) 'blood_group': bloodGroup,
+      if (isSet(rhesus)) 'rhesus_factor': rhesus,
     };
-    if (rhesus != null) body['rhesus_factor'] = rhesus;
+    if (body.isEmpty) return 'Nothing to save — no genotype or blood group was found.';
 
     try {
       final response = await _client.patch(
@@ -204,9 +212,11 @@ class ProfileService {
         },
         body: jsonEncode(body),
       );
-      return response.statusCode == 200;
+      if (response.statusCode == 200) return null;
+      final detail = (jsonDecode(response.body) as Map<String, dynamic>)['detail'];
+      return detail is String ? detail : genericError;
     } catch (_) {
-      return false;
+      return genericError;
     }
   }
 

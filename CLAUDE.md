@@ -18,6 +18,7 @@ Flutter SDK is at `~/flutter/bin` and is **not on PATH** — use `~/flutter/bin/
 | Tests | `~/flutter/bin/flutter test` |
 | Run (dev, emulator → local backend) | `~/flutter/bin/flutter run --dart-define-from-file=flavors/dev.json` |
 | Build check | `~/flutter/bin/flutter build apk --debug --dart-define-from-file=flavors/dev.json` |
+| E2E contract test (app services → a running helix-core; creates users — local/dev only) | `~/flutter/bin/flutter test test/e2e --dart-define=HELIX_E2E=true --dart-define=API_BASE_URL=http://localhost:8000` |
 | Release + Firebase App Distribution | `./scripts/distribute.sh "release notes"` (needs `flutter` + `firebase` on PATH; see `docs/DISTRIBUTE.md`) |
 
 Config is **compile-time only** via `--dart-define-from-file=flavors/{dev,staging,prod}.json`
@@ -37,7 +38,8 @@ Config is **compile-time only** via `--dart-define-from-file=flavors/{dev,stagin
   4 tabs (Discovery, Matches, Scan, Profile). Chat and Blocked Users are pushed with `Navigator.push`.
 - `lib/screens/`, `lib/widgets/` (`GlassCard`, `HelixButton`, `HelixTextField`, `GeneticDisclaimer`, `safety_menu`, ...).
 - `lib/models/` — hand-written `fromJson` (`User`, `ScanResult`, `MatchResult`). Newer dating features pass `Map<String, dynamic>`.
-- `test/widget_test.dart` — the only test file.
+- `test/` — `widget_test.dart` (screens + models), `session_manager_test.dart`, `token_store_test.dart`,
+  `api_client_test.dart`, and `e2e/api_contract_e2e_test.dart` (opt-in, see Commands).
 
 ## Auth & session
 

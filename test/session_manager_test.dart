@@ -1,7 +1,9 @@
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:helix_mobile/config/app_constants.dart';
 import 'package:helix_mobile/services/api_interceptor.dart';
 import 'package:helix_mobile/services/session_manager.dart';
+import 'package:helix_mobile/services/token_store.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -12,8 +14,14 @@ void main() {
     SessionManager.sessionExpired.value = false;
   });
 
+  /// Seed storage: `token` goes to secure storage, everything else to prefs.
   Future<SharedPreferences> prefsWith(Map<String, Object> values) async {
-    SharedPreferences.setMockInitialValues(values);
+    final token = values[AppConstants.tokenKey] as String?;
+    FlutterSecureStorage.setMockInitialValues(
+        token == null ? {} : {AppConstants.tokenKey: token});
+    TokenStore.resetForTest();
+    SharedPreferences.setMockInitialValues(
+        Map.of(values)..remove(AppConstants.tokenKey));
     return SharedPreferences.getInstance();
   }
 
@@ -26,17 +34,17 @@ void main() {
 
       await SessionManager.onUnauthorized('tok-A');
 
-      expect(prefs.getString(AppConstants.tokenKey), isNull);
+      expect(await TokenStore.read(), isNull);
       expect(prefs.getString(AppConstants.authMethodKey), isNull);
       expect(SessionManager.sessionExpired.value, isTrue);
     });
 
     test('401 for a token that is no longer stored is ignored', () async {
-      final prefs = await prefsWith({AppConstants.tokenKey: 'tok-B'});
+      await prefsWith({AppConstants.tokenKey: 'tok-B'});
 
       await SessionManager.onUnauthorized('tok-A');
 
-      expect(prefs.getString(AppConstants.tokenKey), 'tok-B');
+      expect(await TokenStore.read(), 'tok-B');
       expect(SessionManager.sessionExpired.value, isFalse);
     });
 
@@ -51,7 +59,7 @@ void main() {
 
   group('HelixApiInterceptor', () {
     test('401 on an unauthenticated request (wrong password) does not touch the session', () async {
-      final prefs = await prefsWith({
+      await prefsWith({
         AppConstants.tokenKey: 'tok-A',
         AppConstants.authMethodKey: 'password',
       });
@@ -62,12 +70,12 @@ void main() {
       );
       await Future<void>.delayed(Duration.zero);
 
-      expect(prefs.getString(AppConstants.tokenKey), 'tok-A');
+      expect(await TokenStore.read(), 'tok-A');
       expect(SessionManager.sessionExpired.value, isFalse);
     });
 
     test('401 on an authenticated request expires that session', () async {
-      final prefs = await prefsWith({
+      await prefsWith({
         AppConstants.tokenKey: 'tok-A',
         AppConstants.authMethodKey: 'password',
       });
@@ -79,7 +87,7 @@ void main() {
       );
       await Future<void>.delayed(const Duration(milliseconds: 50));
 
-      expect(prefs.getString(AppConstants.tokenKey), isNull);
+      expect(await TokenStore.read(), isNull);
       expect(SessionManager.sessionExpired.value, isTrue);
     });
   });
